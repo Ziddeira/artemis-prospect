@@ -1,0 +1,15 @@
+{
+  "name": "studio-supremo-video",
+  "private": true,
+  "type": "module",
+  "description": "Vídeo de apresentação 9:16 do site da Studio Supremo, feito em JavaScript (canvas + Web Audio).",
+  "scripts": {
+    "preview": "node scripts/serve.mjs",
+    "render": "node scripts/render.mjs",
+    "stills": "node scripts/render.mjs --stills 2.5,7.5,12.5,15.8,18.2,24.5,29.5,34.5,39.5,42,44.5,49"
+  },
+  "devDependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "playwright": "^1.63.0"
+  }
+}

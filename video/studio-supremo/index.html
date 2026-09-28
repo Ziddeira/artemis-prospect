@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Studio Supremo · Vídeo 9:16</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --ink:#0d0d0c; --ink2:#161615; --text:#f1efec; --dim:#a49f97; --steel:#c9c4b9; --hair:rgba(241,239,236,.14); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--ink); color:var(--text); font:14px/1.4 system-ui, sans-serif; }
+  body { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:16px; }
+  #stage { height:min(calc(100vh - 110px), 1920px); width:auto; aspect-ratio:9/16; max-width:100%; background:#000; border:1px solid var(--hair); box-shadow:0 30px 60px -30px rgba(0,0,0,.8); }
+  .bar { display:flex; align-items:center; gap:10px; width:min(100%, 560px); }
+  button { background:var(--text); color:var(--ink); border:0; padding:9px 14px; font-weight:600; letter-spacing:.04em; cursor:pointer; white-space:nowrap; }
+  button.ghost { background:transparent; color:var(--text); border:1px solid var(--hair); }
+  input[type=range] { flex:1; accent-color:var(--steel); }
+  #clock { font-variant-numeric:tabular-nums; color:var(--dim); min-width:78px; text-align:right; }
+  #status { color:var(--dim); min-height:1.4em; }
+  body.render .bar, body.render #status { display:none; }
+  body.render { padding:0; display:block; }
+  body.render #stage { height:auto; width:auto; border:0; box-shadow:none; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div class="bar">
+  <button id="play" type="button">▶ Reproduzir</button>
+  <input id="seek" type="range" min="0" max="50" step="0.01" value="0" aria-label="Linha do tempo">
+  <span id="clock">0:00 / 0:00</span>
+  <button id="rec" class="ghost" type="button" title="Grava a reprodução em tempo real e baixa um .webm">● Gravar WebM</button>
+</div>
+<div id="status">Carregando…</div>
+<script>if (location.search.includes("render")) document.body.classList.add("render");</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vídeo de apresentação (projeto à parte, com suas próprias dependências):
+    "video/**",
   ]),
 ]);
 

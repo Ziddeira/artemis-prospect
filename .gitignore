@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# vídeo de apresentação: arquivos gerados pelo video/render.mjs
+/video/saida/

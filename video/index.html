@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ártemis Prospect — vídeo 9:16</title>
+    <link rel="icon" href="../public/brand/favicon.svg" />
+    <style>
+      @font-face { font-family: "Chakra Petch"; font-weight: 600; font-style: normal; src: url("fonts/chakra-petch-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Chakra Petch"; font-weight: 700; font-style: normal; src: url("fonts/chakra-petch-latin-700-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Chakra Petch"; font-weight: 700; font-style: italic; src: url("fonts/chakra-petch-latin-700-italic.woff2") format("woff2"); }
+      @font-face { font-family: "Manrope"; font-weight: 400; src: url("fonts/manrope-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Manrope"; font-weight: 600; src: url("fonts/manrope-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Manrope"; font-weight: 700; src: url("fonts/manrope-latin-700-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Manrope"; font-weight: 800; src: url("fonts/manrope-latin-800-normal.woff2") format("woff2"); }
+
+      :root {
+        --amarelo: #ffd60a;
+        --preto: #0a0a0a;
+        --superficie: #121212;
+        --borda: #262626;
+        --texto2: #a3a3a3;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--preto); color: #fff; font-family: Manrope, sans-serif; }
+      body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 16px; }
+      .palco { position: relative; height: min(78vh, calc((100vw - 32px) * 16 / 9)); aspect-ratio: 9 / 16; border: 1px solid var(--borda); background: #000; }
+      canvas { display: block; width: 100%; height: 100%; }
+      .capa { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(10, 10, 10, 0.55); cursor: pointer; border: 0; color: inherit; font: inherit; }
+      .capa[hidden] { display: none; }
+      .capa:disabled { cursor: progress; }
+      .capa:disabled span { background: #3d3d3d; color: #d4d4d4; }
+      .capa span { font-family: "Chakra Petch", sans-serif; font-weight: 700; letter-spacing: 0.08em; background: var(--amarelo); color: var(--preto); padding: 16px 26px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); }
+      .controles { width: min(100%, 560px); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+      button.b { font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 16px; border: 1px solid #3d3d3d; background: transparent; color: #d4d4d4; cursor: pointer; }
+      button.b.primario { background: var(--amarelo); border-color: var(--amarelo); color: var(--preto); clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px)); }
+      button.b:disabled { opacity: 0.5; cursor: default; }
+      input[type="range"] { flex: 1 1 100%; accent-color: var(--amarelo); }
+      .tempo { font-family: "Chakra Petch", sans-serif; color: var(--texto2); font-size: 14px; min-width: 110px; text-align: center; }
+      .aviso { color: var(--texto2); font-size: 13px; text-align: center; max-width: 560px; line-height: 1.5; margin: 0; }
+      body.render { padding: 0; gap: 0; display: block; }
+      body.render .palco { height: 1920px; width: 1080px; border: 0; }
+      body.render .ui { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="palco">
+      <canvas id="tela" width="1080" height="1920"></canvas>
+      <button class="capa ui" id="capa" type="button"><span>▶ ASSISTIR COM SOM</span></button>
+    </div>
+    <div class="controles ui">
+      <input id="barra" type="range" min="0" max="40" step="0.001" value="0" aria-label="Posição do vídeo" />
+      <button class="b primario" id="play" type="button">Play</button>
+      <button class="b" id="reinicia" type="button">Do início</button>
+      <span class="tempo" id="tempo">0,0 / 40,0 s</span>
+      <button class="b" id="grava" type="button">Gravar vídeo</button>
+      <button class="b" id="baixaSom" type="button">Baixar som (.wav)</button>
+    </div>
+    <p class="aviso ui" id="aviso">
+      1080 × 1920, 30 quadros por segundo, 40 s. Para o MP4 em qualidade máxima, rode
+      <code>node video/render.mjs</code> (veja video/README.md).
+    </p>
+
+    <script src="roteiro.js"></script>
+    <script src="cenas.js"></script>
+    <script src="som.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

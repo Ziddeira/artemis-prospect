@@ -11,6 +11,10 @@ cantoneiras de mira, badge de score) em `components/marca/`. Os textos dos
 e-mails de autenticação para colar no Supabase estão em
 `brand/emails-supabase.md`.
 
+O vídeo de apresentação para Reels e TikTok (9:16, com som) fica em
+`video/`, feito em JavaScript; veja `video/README.md` para assistir e
+exportar o MP4.
+
 O nome técnico do projeto continua `caca-leads` (repositório, pacote,
 domínio `caca-leads.vercel.app`, projeto do Supabase), para não quebrar nada.
 

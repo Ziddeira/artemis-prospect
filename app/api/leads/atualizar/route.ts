@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { detalhesLugar, ErroGooglePlaces } from "@/lib/leads/google";
-import { cacheValido, montarDadosLead, type DadosLead } from "@/lib/leads/dadosLead";
+import { cacheValido, montarDadosLead, paisDoLugar, type DadosLead } from "@/lib/leads/dadosLead";
+import { dominiosDoPais } from "@/lib/leads/dominios";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const dados = montarDadosLead(await detalhesLugar(placeId));
+    const lugar = await detalhesLugar(placeId);
+    const dados = montarDadosLead(lugar, await dominiosDoPais(supabase, paisDoLugar(lugar)));
     await Promise.allSettled([
       supabase.from("chamadas_google").insert({ user_id: user.id, tipo: "place_details" }),
       supabase.rpc("salvar_dados_lead", { p_place_id: placeId, p_dados: dados }),

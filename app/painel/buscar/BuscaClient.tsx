@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { LeadResultado, Situacao } from "@/lib/leads/classificacao";
+import type { LeadResultado, Modo, Situacao } from "@/lib/leads/classificacao";
+import { PAISES, PAISES_INTERNACIONAIS, configPais, type CodigoPais } from "@/lib/leads/paises";
+import type { ModelosPorIdioma } from "@/lib/perfil/modelos";
 import { VALIDADE_CACHE_DIAS } from "@/lib/leads/dadosLead";
 import { dataCurta, quandoFoi, type UltimaBusca } from "@/lib/leads/ultimaBusca";
 import {
@@ -10,6 +12,7 @@ import {
   MSG_PADRAO_NEGOCIOS,
   linkWhatsapp,
   montarMensagem,
+  preencherModelo,
 } from "@/lib/leads/mensagens";
 import {
   ROTULO_CONFIANCA,
@@ -19,6 +22,8 @@ import {
 } from "@/lib/leads/confianca";
 import EtiquetaSituacao from "@/components/leads/EtiquetaSituacao";
 import SeloConfianca from "@/components/leads/SeloConfianca";
+import HoraLocal from "@/components/leads/HoraLocal";
+import { BotoesContatoInternacional, MensagemPronta } from "@/components/leads/ContatoInternacional";
 import Score from "@/components/marca/Score";
 import LimitePlano from "@/components/marca/LimitePlano";
 import { ListaEsqueleto } from "@/components/leads/CartaoLeadEsqueleto";
@@ -41,12 +46,11 @@ import {
   IconeCadeado,
   IconeEstrela,
   IconeFiltro,
+  IconeGlobo,
   IconeLink,
   IconeMapa,
   IconeWhatsapp,
 } from "@/components/Icones";
-
-type Modo = "negocios" | "hospedagem";
 
 interface Perfil {
   plano: string;
@@ -62,6 +66,7 @@ function infoDe(busca: UltimaBusca): InfoBusca {
     termos: busca.termos,
     areas: busca.areas,
     modo: busca.modo,
+    pais: busca.pais,
     feitaEm: busca.feitaEm,
     expiraEm: busca.expiraEm,
   };
@@ -74,6 +79,23 @@ const ROTULO_PLANO: Record<string, string> = {
 };
 
 const CHECKBOX = "h-5 w-5 shrink-0 cursor-pointer accent-destaque";
+
+// Hospedagem e Internacional são do plano Pro.
+const MODOS: { modo: Modo; rotulo: string; pro: boolean }[] = [
+  { modo: "negocios", rotulo: "Negócios", pro: false },
+  { modo: "hospedagem", rotulo: "Hospedagem", pro: true },
+  { modo: "internacional", rotulo: "Internacional", pro: true },
+];
+
+// "(Hospedagem)", "(Internacional · 🇺🇸 Estados Unidos)" ou nada.
+function rotuloModo(info: { modo: Modo; pais: CodigoPais | null }): string {
+  if (info.modo === "hospedagem") return " (Hospedagem)";
+  if (info.modo === "internacional") {
+    const p = configPais(info.pais);
+    return ` (Internacional · ${p.bandeira} ${p.nome})`;
+  }
+  return "";
+}
 
 const ORDENS = {
   pontuacao: (a: LeadResultado, b: LeadResultado) => b.pontuacao - a.pontuacao,
@@ -99,17 +121,21 @@ function dividirLista(valor: string): string[] {
 export default function BuscaClient({
   perfilInicial,
   ultimaBusca,
+  modelos,
 }: {
   perfilInicial: Perfil;
   // Última busca salva no banco (lida pelo servidor, sem chamar o Google).
   ultimaBusca: UltimaBusca | null;
+  // Modelos de mensagem do Perfil (leads da aba Internacional).
+  modelos: ModelosPorIdioma;
 }) {
   const salvaValida = ultimaBusca?.leads ? ultimaBusca : null;
   const [nicho, setNicho] = useState(ultimaBusca?.termos.join(", ") ?? "");
   const [areas, setAreas] = useState(ultimaBusca?.areas.join(", ") ?? "");
   const [modo, setModo] = useState<Modo>(
-    ultimaBusca?.modo === "hospedagem" && perfilInicial.plano === "pro" ? "hospedagem" : "negocios",
+    ultimaBusca && ultimaBusca.modo !== "negocios" && perfilInicial.plano === "pro" ? ultimaBusca.modo : "negocios",
   );
+  const [pais, setPais] = useState<CodigoPais>(ultimaBusca?.pais ?? PAISES_INTERNACIONAIS[0]);
   const [perfil, setPerfil] = useState(perfilInicial);
   const [leads, setLeads] = useState<LeadResultado[]>(salvaValida?.leads ?? []);
   const [carregando, setCarregando] = useState(false);
@@ -118,6 +144,8 @@ export default function BuscaClient({
   const [aviso, setAviso] = useState<string | null>(salvaValida?.aviso ?? null);
   // Quantas empresas fechadas definitivamente a última busca escondeu.
   const [fechadosOcultos, setFechadosOcultos] = useState(0);
+  // Quantas eram de outro país (só na aba Internacional).
+  const [deOutroPais, setDeOutroPais] = useState(0);
   const [buscaFeita, setBuscaFeita] = useState(!!salvaValida);
   const [infoBusca, setInfoBusca] = useState<InfoBusca | null>(salvaValida ? infoDe(salvaValida) : null);
   // Busca salva que passou do prazo do cache do Google: a lista foi
@@ -147,6 +175,12 @@ export default function BuscaClient({
   const listaAreas = useMemo(() => dividirLista(areas), [areas]);
   const estimativaBuscas = termos.length * listaAreas.length;
   const podeHospedagem = perfil.plano === "pro";
+  const ehInternacional = modo === "internacional";
+  // Config do país da busca (Brasil nas abas Negócios e Hospedagem).
+  const paisBusca = configPais(ehInternacional ? pais : null);
+  // O resultado na tela é de uma busca internacional? (Pode ser diferente
+  // da aba escolhida agora.)
+  const resultadoInternacional = infoBusca?.modo === "internacional";
   const semBuscas = perfil.buscasRestantes <= 0;
 
   const contagens = useMemo(() => {
@@ -170,7 +204,7 @@ export default function BuscaClient({
           situacoesAtivas[l.situacao] &&
           l.nota >= minNota &&
           l.avaliacoes >= minAvaliacoes &&
-          (!apenasCelular || l.temCelular) &&
+          (!apenasCelular || resultadoInternacional || l.temCelular) &&
           (!apenasAberto || l.aberto) &&
           passaFiltroConfianca(l.confianca, filtroConfianca) &&
           (!esconderDesbloqueados || !l.contato) &&
@@ -183,6 +217,7 @@ export default function BuscaClient({
     minNota,
     minAvaliacoes,
     apenasCelular,
+    resultadoInternacional,
     apenasAberto,
     filtroConfianca,
     esconderDesbloqueados,
@@ -194,7 +229,7 @@ export default function BuscaClient({
   const primeiroBloqueado = leadsFiltrados.find((l) => !l.contato)?.id;
 
   function alternarModo(novoModo: Modo) {
-    if (novoModo === "hospedagem" && !podeHospedagem) return;
+    if (novoModo !== "negocios" && !podeHospedagem) return;
     setModo(novoModo);
   }
 
@@ -202,10 +237,14 @@ export default function BuscaClient({
     setErro(null);
     setAviso(null);
     setFechadosOcultos(0);
+    setDeOutroPais(0);
     if (!termos.length) return setErro("Digite ao menos um nicho.");
     if (!listaAreas.length) return setErro("Digite ao menos uma região.");
     if (modo === "hospedagem" && !podeHospedagem) {
       return setErro("O modo Hospedagem é exclusivo do plano Pro.");
+    }
+    if (ehInternacional && !podeHospedagem) {
+      return setErro("A aba Internacional é exclusiva do plano Pro.");
     }
     if (estimativaBuscas > perfil.buscasRestantes) {
       return setErro(
@@ -218,7 +257,7 @@ export default function BuscaClient({
       const res = await fetch("/api/leads/buscar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nicho, areas, modo }),
+        body: JSON.stringify({ nicho, areas, modo, ...(ehInternacional ? { pais } : {}) }),
       });
       const dados = await res.json();
       if (!res.ok) {
@@ -230,12 +269,14 @@ export default function BuscaClient({
       setPerfil((p) => ({ ...p, buscasRestantes: dados.buscasRestantes }));
       setAviso(dados.aviso || null);
       setFechadosOcultos(Number(dados.fechadosOcultos) || 0);
+      setDeOutroPais(Number(dados.deOutroPais) || 0);
       setBuscaFeita(true);
       setExpirada(null);
       setInfoBusca({
         termos: dados.termos,
         areas: dados.areas,
         modo: dados.modo,
+        pais: dados.pais ?? null,
         feitaEm: dados.feitaEm,
         expiraEm: dados.expiraEm,
       });
@@ -266,6 +307,7 @@ export default function BuscaClient({
       setExpirada(null);
       setAviso(null);
       setFechadosOcultos(0);
+      setDeOutroPais(0);
       setNicho("");
       setAreas("");
     } catch {
@@ -319,7 +361,7 @@ export default function BuscaClient({
     <div>
       <TituloPagina
         titulo="Buscar leads"
-        descricao="Busca no Google Maps e separa quem não tem site, quem depende de Airbnb/Booking e quem só usa app ou rede social."
+        descricao="Busca no Google Maps e separa quem não tem site, quem depende de Airbnb/Booking e quem só usa app ou rede social. No plano Pro, também em outros países."
       />
 
       {/* data-tour: partes destacadas pelo tour da Ártemis
@@ -337,58 +379,89 @@ export default function BuscaClient({
       </div>
 
       <div data-tour="busca" className={`${CARTAO} mt-4 p-4 sm:p-6`}>
-        <div role="group" aria-label="Tipo de busca" className="grid w-full grid-cols-2 gap-1 border border-line bg-canvas p-1 sm:inline-grid sm:w-auto">
-          <button
-            type="button"
-            onClick={() => alternarModo("negocios")}
-            aria-pressed={modo === "negocios"}
-            className={`min-h-11 px-5 font-display text-sm font-semibold uppercase tracking-[0.08em] transition ${
-              modo === "negocios" ? ABA_ATIVA : ABA_INATIVA
-            }`}
-          >
-            Negócios
-          </button>
-          <button
-            type="button"
-            onClick={() => alternarModo("hospedagem")}
-            disabled={!podeHospedagem}
-            aria-pressed={modo === "hospedagem"}
-            title={!podeHospedagem ? "Disponível no plano Pro" : undefined}
-            className={`inline-flex min-h-11 items-center justify-center gap-1.5 px-5 font-display text-sm font-semibold uppercase tracking-[0.08em] transition ${
-              modo === "hospedagem" ? ABA_ATIVA : ABA_INATIVA
-            } ${!podeHospedagem ? "cursor-not-allowed opacity-60" : ""}`}
-          >
-            Hospedagem
-            {!podeHospedagem && (
-              <>
-                <IconeCadeado width={14} height={14} />
-                <span className="sr-only">(exclusivo do plano Pro)</span>
-              </>
-            )}
-          </button>
+        <div role="group" aria-label="Tipo de busca" className="grid w-full grid-cols-3 gap-1 border border-line bg-canvas p-1 sm:inline-grid sm:w-auto">
+          {MODOS.map((m) => {
+            const bloqueado = m.pro && !podeHospedagem;
+            return (
+              <button
+                key={m.modo}
+                type="button"
+                onClick={() => alternarModo(m.modo)}
+                disabled={bloqueado}
+                aria-pressed={modo === m.modo}
+                title={bloqueado ? "Disponível no plano Pro" : undefined}
+                className={`inline-flex min-h-11 items-center justify-center gap-1.5 px-2 font-display text-[13px] font-semibold uppercase tracking-[0.06em] transition sm:px-5 sm:text-sm sm:tracking-[0.08em] ${
+                  modo === m.modo ? ABA_ATIVA : ABA_INATIVA
+                } ${bloqueado ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                {m.rotulo}
+                {bloqueado && (
+                  <>
+                    <IconeCadeado width={14} height={14} />
+                    <span className="sr-only">(exclusivo do plano Pro)</span>
+                  </>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {ehInternacional && (
+          <fieldset className="mt-4">
+            <legend className={ROTULO}>País</legend>
+            <div className="flex flex-wrap gap-2">
+              {PAISES_INTERNACIONAIS.map((codigo) => {
+                const p = PAISES[codigo];
+                const ativo = pais === codigo;
+                return (
+                  <button
+                    key={codigo}
+                    type="button"
+                    onClick={() => setPais(codigo)}
+                    aria-pressed={ativo}
+                    className={`inline-flex min-h-11 items-center gap-2 border px-4 text-sm font-semibold transition ${
+                      ativo ? "border-destaque bg-primary-soft text-destaque" : "border-line bg-surface text-ink-2 hover:text-ink"
+                    }`}
+                  >
+                    <span aria-hidden="true">{p.bandeira}</span>
+                    {p.nome}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 flex items-start gap-1.5 text-sm text-muted">
+              <IconeGlobo width={16} height={16} className="mt-0.5 shrink-0" />
+              Digite o nicho em inglês, do jeito que as empresas aparecem no Google de lá. A tela continua em português.
+            </p>
+          </fieldset>
+        )}
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="nicho" className={ROTULO}>
-              {modo === "hospedagem" ? "Tipos de hospedagem (separe por vírgula)" : "Nicho (pode separar por vírgula)"}
+              {modo === "hospedagem"
+                ? "Tipos de hospedagem (separe por vírgula)"
+                : ehInternacional
+                  ? "Nicho em inglês (pode separar por vírgula)"
+                  : "Nicho (pode separar por vírgula)"}
             </label>
             <input
               id="nicho"
               className={CAMPO}
-              placeholder={modo === "hospedagem" ? "chalé, cabana, pousada" : "barbearia, salão de beleza"}
+              lang={ehInternacional ? "en" : undefined}
+              placeholder={modo === "hospedagem" ? "chalé, cabana, pousada" : paisBusca.exemploNicho}
               value={nicho}
               onChange={(e) => setNicho(e.target.value)}
             />
           </div>
           <div>
             <label htmlFor="areas" className={ROTULO}>
-              Regiões (separe por vírgula)
+              {ehInternacional ? "Cidades ou estados (separe por vírgula)" : "Regiões (separe por vírgula)"}
             </label>
             <input
               id="areas"
               className={CAMPO}
-              placeholder="Centro Palhoça SC, Pagani Palhoça SC"
+              placeholder={paisBusca.exemploRegiao}
               value={areas}
               onChange={(e) => setAreas(e.target.value)}
             />
@@ -479,7 +552,7 @@ export default function BuscaClient({
           <div className="min-w-0 text-sm text-ink-2">
             <p>
               Resultado de <strong className="text-ink" suppressHydrationWarning>{quandoFoi(infoBusca.feitaEm)}</strong>
-              {infoBusca.modo === "hospedagem" ? " (Hospedagem)" : ""}:{" "}
+              {rotuloModo(infoBusca)}:{" "}
               <strong className="break-words text-ink">{infoBusca.termos.join(", ")}</strong> em{" "}
               <strong className="break-words text-ink">{infoBusca.areas.join(", ")}</strong>
             </p>
@@ -610,19 +683,25 @@ export default function BuscaClient({
                   />
                 </div>
               </div>
-              <label htmlFor="bairro-contem" className="mb-1 mt-3 block text-xs font-semibold text-ink-2">Bairro contém</label>
+              <label htmlFor="bairro-contem" className="mb-1 mt-3 block text-xs font-semibold text-ink-2">
+                {resultadoInternacional ? "Bairro ou cidade contém" : "Bairro contém"}
+              </label>
               <input
                 id="bairro-contem"
                 className={CAMPO}
-                placeholder="ex.: Centro"
+                placeholder={resultadoInternacional ? "ex.: Downtown" : "ex.: Centro"}
                 value={textoEndereco}
                 onChange={(e) => setTextoEndereco(e.target.value)}
               />
               <div className="mt-2 flex flex-col text-sm text-ink-2">
-                <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
-                  <input type="checkbox" className={CHECKBOX} checked={apenasCelular} onChange={(e) => setApenasCelular(e.target.checked)} />
-                  Só com celular
-                </label>
+                {/* Fora do Brasil não dá para saber se o número é celular,
+                    e o contato é por telefone mesmo. */}
+                {!resultadoInternacional && (
+                  <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
+                    <input type="checkbox" className={CHECKBOX} checked={apenasCelular} onChange={(e) => setApenasCelular(e.target.checked)} />
+                    Só com celular
+                  </label>
+                )}
                 <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
                   <input type="checkbox" className={CHECKBOX} checked={apenasAberto} onChange={(e) => setApenasAberto(e.target.checked)} />
                   Só em funcionamento
@@ -651,6 +730,12 @@ export default function BuscaClient({
                     {fechadosOcultos === 1 ? "ficou" : "ficaram"} de fora
                   </span>
                 )}
+                {deOutroPais > 0 && (
+                  <span className="text-muted">
+                    {" "}
+                    · {deOutroPais} de outro país {deOutroPais === 1 ? "ficou" : "ficaram"} de fora
+                  </span>
+                )}
               </p>
               <label htmlFor="ordenar" className="sr-only">Ordenar por</label>
               <select
@@ -671,6 +756,7 @@ export default function BuscaClient({
                 <LeadCard
                   key={lead.id}
                   lead={lead}
+                  modelos={modelos}
                   tour={lead.id === primeiroBloqueado}
                   carregando={!!desbloqueando[lead.id]}
                   onDesbloquear={() => desbloquear(lead)}
@@ -683,7 +769,9 @@ export default function BuscaClient({
                   texto={
                     leads.length
                       ? "Baixe a nota mínima, zere as avaliações, inclua mais níveis de confiança ou ative mais categorias para ver mais leads."
-                      : "Tente um nicho mais comum ou uma região maior (o nome da cidade, por exemplo)."
+                      : resultadoInternacional
+                        ? "Confira se o nicho está em inglês (ex.: barber shop) e tente uma cidade maior ou o estado."
+                        : "Tente um nicho mais comum ou uma região maior (o nome da cidade, por exemplo)."
                   }
                 />
               )}
@@ -697,11 +785,13 @@ export default function BuscaClient({
 
 function LeadCard({
   lead,
+  modelos,
   tour,
   carregando,
   onDesbloquear,
 }: {
   lead: LeadResultado;
+  modelos: ModelosPorIdioma;
   tour: boolean;
   carregando: boolean;
   onDesbloquear: () => void;
@@ -709,85 +799,109 @@ function LeadCard({
   const eHospedagem = lead.modo === "hospedagem" || lead.situacao === "booking";
   const modeloMsg = eHospedagem ? MSG_PADRAO_HOSPEDAGEM : MSG_PADRAO_NEGOCIOS;
   const plataforma = lead.plataforma || (eHospedagem ? "Airbnb ou Booking" : "redes sociais");
+  // Lead de fora do Brasil: telefone internacional, Maps e mensagem no
+  // idioma do país, no lugar do WhatsApp.
+  const internacional = !!lead.pais && lead.pais !== "BR";
+  const idioma = configPais(lead.pais).idiomaMensagem;
+  const msgCurta =
+    idioma === "pt" ? montarMensagem(modeloMsg, lead.nome, plataforma) : preencherModelo(modelos[idioma].curta, lead.nome);
 
   return (
-    <article className={`${CARTAO} flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5`}>
-      <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
-        <Score pontos={lead.pontuacao} title={`Pontuação de lead: ${lead.pontuacao} de 100`} />
+    <article className={`${CARTAO} flex flex-col gap-4 p-4 sm:p-5`}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+          <Score pontos={lead.pontuacao} title={`Pontuação de lead: ${lead.pontuacao} de 100`} />
 
-        <div className="min-w-0 flex-1">
-          <h3 className="break-words font-sans text-base font-extrabold text-ink">{lead.nome}</h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <EtiquetaSituacao situacao={lead.situacao} plataforma={lead.plataforma} />
-            {lead.tipo && <span className="text-xs text-muted">{lead.tipo}</span>}
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
-            <span className="min-w-0 break-words">{lead.bairro || lead.area}</span>
-            {lead.nota ? (
-              <span className="inline-flex items-center gap-1">
-                <IconeEstrela className="text-ink-2" />
-                {lead.nota.toFixed(1).replace(".", ",")}{" "}
-                <span className="text-muted">({lead.avaliacoes})</span>
-              </span>
-            ) : (
-              <span className="text-muted">Sem avaliações</span>
-            )}
-            {!lead.aberto && !lead.confianca && <span className="font-semibold text-danger">Fechado</span>}
-          </div>
-          {lead.confianca && (
-            <div className="mt-2">
-              <SeloConfianca confianca={lead.confianca} />
+          <div className="min-w-0 flex-1">
+            <h3 className="break-words font-sans text-base font-extrabold text-ink">{lead.nome}</h3>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <EtiquetaSituacao situacao={lead.situacao} plataforma={lead.plataforma} />
+              {lead.tipo && <span className="text-xs text-muted">{lead.tipo}</span>}
             </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
+              <span className="min-w-0 break-words">{lead.bairro || lead.area}</span>
+              {lead.nota ? (
+                <span className="inline-flex items-center gap-1">
+                  <IconeEstrela className="text-ink-2" />
+                  {lead.nota.toFixed(1).replace(".", ",")}{" "}
+                  <span className="text-muted">({lead.avaliacoes})</span>
+                </span>
+              ) : (
+                <span className="text-muted">Sem avaliações</span>
+              )}
+              {!lead.aberto && !lead.confianca && <span className="font-semibold text-danger">Fechado</span>}
+            </div>
+            {(lead.confianca || lead.fuso) && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {lead.confianca && <SeloConfianca confianca={lead.confianca} />}
+                {lead.fuso && <HoraLocal fuso={lead.fuso} />}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:flex-nowrap [&>*]:flex-1 sm:[&>*]:flex-none">
+          {lead.contato && internacional ? (
+            <BotoesContatoInternacional
+              pais={lead.pais}
+              telefone={lead.contato.telefone}
+              whatsapp={lead.contato.whatsapp}
+              maps={lead.contato.maps}
+              site={lead.contato.site}
+              mensagemWhatsapp={msgCurta}
+            />
+          ) : lead.contato ? (
+            <>
+              {lead.contato.whatsapp ? (
+                <a
+                  target="_blank"
+                  rel="noopener"
+                  href={linkWhatsapp(lead.contato.whatsapp, montarMensagem(modeloMsg, lead.nome, plataforma))}
+                  className={BOTAO_WHATSAPP}
+                >
+                  <IconeWhatsapp width={18} height={18} />
+                  WhatsApp
+                </a>
+              ) : (
+                <span className="text-sm text-ink-2">{lead.contato.telefone || "Sem telefone"}</span>
+              )}
+              {lead.contato.maps && (
+                <a target="_blank" rel="noopener" href={lead.contato.maps} className={BOTAO_NEUTRO}>
+                  <IconeMapa width={18} height={18} />
+                  Maps
+                </a>
+              )}
+              {lead.contato.site && (
+                <a target="_blank" rel="noopener" href={lead.contato.site} className={BOTAO_NEUTRO}>
+                  <IconeLink width={18} height={18} />
+                  Link
+                </a>
+              )}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onDesbloquear}
+              disabled={carregando}
+              data-tour={tour ? "desbloquear" : undefined}
+              className={BOTAO_NEUTRO}
+            >
+              <IconeCadeado width={13} height={13} />
+              {carregando
+                ? "Desbloqueando..."
+                : lead.desbloqueado
+                  ? "Ver contato (já pago)"
+                  : "Desbloquear (1 crédito)"}
+            </button>
           )}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:flex-nowrap [&>*]:flex-1 sm:[&>*]:flex-none">
-        {lead.contato ? (
-          <>
-            {lead.contato.whatsapp ? (
-              <a
-                target="_blank"
-                rel="noopener"
-                href={linkWhatsapp(lead.contato.whatsapp, montarMensagem(modeloMsg, lead.nome, plataforma))}
-                className={BOTAO_WHATSAPP}
-              >
-                <IconeWhatsapp width={18} height={18} />
-                WhatsApp
-              </a>
-            ) : (
-              <span className="text-sm text-ink-2">{lead.contato.telefone || "Sem telefone"}</span>
-            )}
-            {lead.contato.maps && (
-              <a target="_blank" rel="noopener" href={lead.contato.maps} className={BOTAO_NEUTRO}>
-                <IconeMapa width={18} height={18} />
-                Maps
-              </a>
-            )}
-            {lead.contato.site && (
-              <a target="_blank" rel="noopener" href={lead.contato.site} className={BOTAO_NEUTRO}>
-                <IconeLink width={18} height={18} />
-                Link
-              </a>
-            )}
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={onDesbloquear}
-            disabled={carregando}
-            data-tour={tour ? "desbloquear" : undefined}
-            className={BOTAO_NEUTRO}
-          >
-            <IconeCadeado width={13} height={13} />
-            {carregando
-              ? "Desbloqueando..."
-              : lead.desbloqueado
-                ? "Ver contato (já pago)"
-                : "Desbloquear (1 crédito)"}
-          </button>
-        )}
-      </div>
+      {lead.contato && internacional && (
+        <div className="border-t border-line pt-3">
+          <MensagemPronta pais={lead.pais} nome={lead.nome} modelosPorIdioma={modelos} />
+        </div>
+      )}
     </article>
   );
 }

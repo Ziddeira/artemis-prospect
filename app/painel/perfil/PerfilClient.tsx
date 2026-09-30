@@ -19,6 +19,7 @@ import {
 } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import type { DadosPerfil } from "@/lib/perfil/dados";
+import { LIMITES_MODELO, MODELOS_PADRAO, preencherModelo, type ModelosMensagem } from "@/lib/leads/mensagens";
 import {
   APELIDO_MAX,
   SENHA_MIN,
@@ -42,6 +43,8 @@ export default function PerfilClient({
   pendente,
   mostrarVendas,
   acesso,
+  modelosIngles,
+  modelosAtivos,
 }: {
   userId: string;
   email: string;
@@ -52,6 +55,10 @@ export default function PerfilClient({
   // null = etapa 14 (Comunidade) ainda não rodada no banco.
   mostrarVendas: boolean | null;
   acesso: FormasDeEntrar;
+  // Modelos de mensagem em inglês (aba Internacional).
+  modelosIngles: ModelosMensagem;
+  // false = etapa 21 ainda não rodada no banco.
+  modelosAtivos: boolean;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -88,7 +95,145 @@ export default function PerfilClient({
           <CartaoTour />
         </div>
       </div>
+
+      <CartaoMensagensIngles modelos={modelosIngles} ativo={modelosAtivos} />
     </div>
+  );
+}
+
+// Mensagens em inglês ------------------------------------------------------
+// Modelos usados nos leads da aba Internacional (plano Pro): um e-mail com
+// assunto e uma mensagem curta, para formulário de contato ou mensagem
+// direta. Os modelos em português (WhatsApp) continuam os mesmos.
+function CartaoMensagensIngles({ modelos, ativo }: { modelos: ModelosMensagem; ativo: boolean }) {
+  const [valores, setValores] = useState(modelos);
+  const [salvando, setSalvando] = useState(false);
+  const [mensagem, setMensagem] = useState<Mensagem>(null);
+  const padrao = MODELOS_PADRAO.en;
+  const ehPadrao =
+    valores.emailAssunto === padrao.emailAssunto &&
+    valores.emailCorpo === padrao.emailCorpo &&
+    valores.curta === padrao.curta;
+
+  function mudar(campo: keyof ModelosMensagem, texto: string) {
+    setValores((v) => ({ ...v, [campo]: texto }));
+  }
+
+  async function salvar(e: FormEvent) {
+    e.preventDefault();
+    setMensagem(null);
+    if (!valores.emailAssunto.trim() || !valores.emailCorpo.trim() || !valores.curta.trim()) {
+      setMensagem({ tipo: "erro", texto: "Preencha o assunto, o texto do e-mail e a mensagem curta." });
+      return;
+    }
+    setSalvando(true);
+    const erro = await chamar("/api/perfil/mensagens", "PATCH", { idioma: "en", modelos: valores });
+    setSalvando(false);
+    setMensagem(erro ? { tipo: "erro", texto: erro } : { tipo: "ok", texto: "Modelos salvos." });
+  }
+
+  async function voltarAoPadrao() {
+    if (!window.confirm("Voltar aos modelos padrão? O que você escreveu aqui será apagado.")) return;
+    setMensagem(null);
+    setSalvando(true);
+    const erro = await chamar("/api/perfil/mensagens", "PATCH", { idioma: "en", modelos: null });
+    setSalvando(false);
+    if (erro) {
+      setMensagem({ tipo: "erro", texto: erro });
+      return;
+    }
+    setValores(padrao);
+    setMensagem({ tipo: "ok", texto: "Modelos padrão de volta." });
+  }
+
+  return (
+    <section id="mensagens-ingles" aria-labelledby="titulo-mensagens-ingles" className={CARTAO}>
+      <h2 id="titulo-mensagens-ingles" className={TITULO_CARTAO}>
+        Mensagens em inglês
+      </h2>
+      <p className="mt-1 mb-4 text-sm text-ink-2">
+        Usadas nos leads da aba Internacional (plano Pro), com o botão de copiar. Escreva{" "}
+        <code className="font-semibold text-ink">{"{nome}"}</code> onde deve entrar o nome da empresa. As
+        mensagens em português, de WhatsApp, continuam as mesmas.
+      </p>
+      {!ativo && (
+        <p className={`${ALERTA_AVISO} mb-4`}>
+          Os modelos em inglês ainda não foram ativados no banco. Rode os scripts supabase/etapa21-1 e
+          etapa21-2 no Supabase. Até lá, valem os modelos padrão.
+        </p>
+      )}
+      <form onSubmit={salvar} className="grid gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <div>
+            <label htmlFor="modelo-assunto" className={ROTULO}>
+              E-mail: assunto
+            </label>
+            <input
+              id="modelo-assunto"
+              lang="en"
+              className={CAMPO}
+              maxLength={LIMITES_MODELO.emailAssunto}
+              value={valores.emailAssunto}
+              onChange={(e) => mudar("emailAssunto", e.target.value)}
+              disabled={!ativo}
+            />
+          </div>
+          <div>
+            <label htmlFor="modelo-email" className={ROTULO}>
+              E-mail: texto
+            </label>
+            <textarea
+              id="modelo-email"
+              lang="en"
+              rows={9}
+              className={`${CAMPO} resize-y`}
+              maxLength={LIMITES_MODELO.emailCorpo}
+              value={valores.emailCorpo}
+              onChange={(e) => mudar("emailCorpo", e.target.value)}
+              disabled={!ativo}
+            />
+            <p className={AJUDA}>Termine com a sua assinatura (nome e site), se quiser.</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-4">
+          <div>
+            <label htmlFor="modelo-curta" className={ROTULO}>
+              Mensagem curta (formulário de contato ou mensagem direta)
+            </label>
+            <textarea
+              id="modelo-curta"
+              lang="en"
+              rows={5}
+              className={`${CAMPO} resize-y`}
+              maxLength={LIMITES_MODELO.curta}
+              value={valores.curta}
+              onChange={(e) => mudar("curta", e.target.value)}
+              disabled={!ativo}
+            />
+          </div>
+          <div>
+            <p className={ROTULO}>Como fica (exemplo com “Joe&apos;s Barber Shop”)</p>
+            <p lang="en" className="whitespace-pre-line border border-line bg-canvas px-3 py-2 text-sm text-ink-2">
+              {preencherModelo(valores.curta, "Joe's Barber Shop")}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" disabled={salvando || !ativo} className={BOTAO}>
+              {salvando ? "Salvando..." : "Salvar modelos"}
+            </button>
+            <button
+              type="button"
+              onClick={voltarAoPadrao}
+              disabled={salvando || !ativo || ehPadrao}
+              className={BOTAO_SECUNDARIO}
+            >
+              Voltar ao padrão
+            </button>
+          </div>
+          <Alerta mensagem={mensagem} />
+        </div>
+      </form>
+    </section>
   );
 }
 

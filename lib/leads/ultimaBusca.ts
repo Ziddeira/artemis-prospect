@@ -5,12 +5,15 @@
 // Recarregar a busca salva só LÊ o banco: não gasta busca e não chama o
 // Google. A única rota que gasta busca e chama o Google continua sendo
 // POST /api/leads/buscar.
-import type { LeadResultado, Modo } from "./classificacao";
+import { ehModo, type LeadResultado, type Modo } from "./classificacao";
+import { ehPaisInternacional, type CodigoPais } from "./paises";
 
 export interface UltimaBusca {
   termos: string[];
   areas: string[];
   modo: Modo;
+  // País da busca internacional; nulo nas outras abas.
+  pais: CodigoPais | null;
   // Nulo = passou do prazo do cache do Google e a lista foi apagada.
   leads: LeadResultado[] | null;
   totalLeads: number;
@@ -24,6 +27,8 @@ export interface LinhaUltimaBusca {
   termos: string[];
   areas: string[];
   modo: string;
+  // Só existe depois do SQL da etapa 21.
+  pais?: string | null;
   leads: LeadResultado[] | null;
   total_leads: number;
   aviso: string | null;
@@ -35,7 +40,8 @@ export function deLinha(linha: LinhaUltimaBusca): UltimaBusca {
   return {
     termos: linha.termos ?? [],
     areas: linha.areas ?? [],
-    modo: linha.modo === "hospedagem" ? "hospedagem" : "negocios",
+    modo: ehModo(linha.modo) ? linha.modo : "negocios",
+    pais: ehPaisInternacional(linha.pais) ? linha.pais : null,
     leads: Array.isArray(linha.leads) ? linha.leads : null,
     totalLeads: linha.total_leads ?? 0,
     aviso: linha.aviso,

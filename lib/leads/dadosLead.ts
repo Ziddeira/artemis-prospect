@@ -2,13 +2,16 @@
 // (leads_desbloqueados.dados), para a página "Meus leads" não precisar
 // chamar o Google a cada visita. Ver supabase/etapa4-cache-leads-comunidade.sql.
 import {
-  celularBrasileiro,
   classificar,
   extrairBairro,
   nomePlataforma,
+  telefoneDoLugar,
+  whatsappDoLugar,
   type PlaceBruto,
   type Situacao,
 } from "./classificacao";
+import { codigoEstado, codigoPaisDoEndereco, escolherFuso } from "./fuso";
+import { PAIS_PADRAO, configPais, ehCodigoPais, type CodigoPais } from "./paises";
 
 // Política de cache da Google Maps Platform: o conteúdo (tudo menos o
 // place_id) só pode ficar em cache temporário. Passado esse prazo, o
@@ -26,10 +29,24 @@ export interface DadosLead {
   whatsapp: string | null;
   site: string | null;
   maps: string | null;
+  // País e fuso da empresa (aba Internacional). Cache gravado antes disso
+  // vem sem: vale Brasil.
+  pais?: CodigoPais;
+  fuso?: string | null;
 }
 
-export function montarDadosLead(lugar: PlaceBruto): DadosLead {
-  const situacao = classificar(lugar.websiteUri);
+// País da empresa pelo endereço que o Google devolveu. País fora da
+// lista de lib/leads/paises.ts conta como o padrão.
+export function paisDoLugar(lugar: PlaceBruto): CodigoPais {
+  const codigo = codigoPaisDoEndereco(lugar.addressComponents);
+  return ehCodigoPais(codigo) ? codigo : PAIS_PADRAO;
+}
+
+// dominiosDoPais: lista extra de sites de terceiros do país da empresa
+// (lib/leads/dominios.ts).
+export function montarDadosLead(lugar: PlaceBruto, dominiosDoPais: string[] = []): DadosLead {
+  const pais = configPais(paisDoLugar(lugar));
+  const situacao = classificar(lugar.websiteUri, dominiosDoPais);
   const ehPlataforma = situacao === "booking" || situacao === "rede_social";
   return {
     nome: lugar.displayName?.text || "Sem nome",
@@ -38,10 +55,12 @@ export function montarDadosLead(lugar: PlaceBruto): DadosLead {
     avaliacoes: lugar.userRatingCount || 0,
     situacao,
     plataforma: ehPlataforma && lugar.websiteUri ? nomePlataforma(lugar.websiteUri) : null,
-    telefone: lugar.nationalPhoneNumber || lugar.internationalPhoneNumber || null,
-    whatsapp: celularBrasileiro(lugar.nationalPhoneNumber, lugar.internationalPhoneNumber),
+    telefone: telefoneDoLugar(pais, lugar),
+    whatsapp: whatsappDoLugar(pais, lugar),
     site: lugar.websiteUri || null,
     maps: lugar.googleMapsUri || null,
+    pais: pais.codigo,
+    fuso: escolherFuso(pais, codigoEstado(lugar.addressComponents), lugar.utcOffsetMinutes),
   };
 }
 

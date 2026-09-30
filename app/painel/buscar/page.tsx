@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { cacheValido, type DadosLead } from "@/lib/leads/dadosLead";
 import { deLinha, type LinhaUltimaBusca, type UltimaBusca } from "@/lib/leads/ultimaBusca";
+import { lerModelosMensagem } from "@/lib/perfil/modelos";
 import BuscaClient from "./BuscaClient";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +25,16 @@ export default async function BuscarPage() {
 
   const ultimaBusca = await lerUltimaBusca(supabase);
 
+  // Modelos de mensagem em inglês do Perfil (aba Internacional).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { modelos } = await lerModelosMensagem(supabase, user?.id ?? "");
+
   return (
     <BuscaClient
       ultimaBusca={ultimaBusca}
+      modelos={modelos}
       perfilInicial={{
         plano: perfil?.plano ?? "gratis",
         buscasRestantes: perfil?.buscas_restantes ?? 0,

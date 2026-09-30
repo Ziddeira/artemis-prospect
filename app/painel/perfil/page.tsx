@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { lerPerfil } from "@/lib/perfil/dados";
+import { lerModelosMensagem } from "@/lib/perfil/modelos";
 import PerfilClient from "./PerfilClient";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,8 @@ export default async function PerfilPage({
     google: provedores.has("google"),
   };
 
+  const { modelos, ativo: modelosAtivos } = await lerModelosMensagem(supabase, user.id);
+
   return (
     <PerfilClient
       userId={user.id}
@@ -63,6 +66,8 @@ export default async function PerfilPage({
       pendente={pendente}
       mostrarVendas={mostrarVendas}
       acesso={acesso}
+      modelosIngles={modelos.en}
+      modelosAtivos={modelosAtivos}
     />
   );
 }

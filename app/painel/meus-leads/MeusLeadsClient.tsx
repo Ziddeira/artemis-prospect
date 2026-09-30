@@ -16,7 +16,12 @@ import {
   MSG_PADRAO_NEGOCIOS,
   linkWhatsapp,
   montarMensagem,
+  preencherModelo,
 } from "@/lib/leads/mensagens";
+import { configPais } from "@/lib/leads/paises";
+import type { ModelosPorIdioma } from "@/lib/perfil/modelos";
+import HoraLocal from "@/components/leads/HoraLocal";
+import { BotoesContatoInternacional, MensagemPronta } from "@/components/leads/ContatoInternacional";
 import EtiquetaSituacao from "@/components/leads/EtiquetaSituacao";
 import CartaoLeadEsqueleto from "@/components/leads/CartaoLeadEsqueleto";
 import FunilLead, { type FunilEstado } from "@/components/leads/FunilLead";
@@ -61,6 +66,7 @@ const SIMULTANEOS = 3;
 
 export default function MeusLeadsClient({
   leads,
+  modelos,
   funilAtivo,
   erroFunil = null,
   retornoAtivo = false,
@@ -68,6 +74,8 @@ export default function MeusLeadsClient({
   marcacoesIniciais = {},
 }: {
   leads: LeadSalvo[];
+  // Modelos de mensagem do Perfil (leads de fora do Brasil).
+  modelos: ModelosPorIdioma;
   funilAtivo: boolean;
   erroFunil?: string | null;
   // false = a etapa 10 ainda não foi rodada no Supabase.
@@ -307,7 +315,7 @@ export default function MeusLeadsClient({
           return (
             <li key={lead.placeId}>
               {estado?.dados ? (
-                <CartaoLead dados={estado.dados} desbloqueadoEm={lead.desbloqueadoEm}>
+                <CartaoLead dados={estado.dados} desbloqueadoEm={lead.desbloqueadoEm} modelos={modelos}>
                   {funilAtivo && funis[lead.placeId] && (
                     <>
                       <FunilLead
@@ -422,15 +430,23 @@ function iniciais(nome: string) {
 function CartaoLead({
   dados,
   desbloqueadoEm,
+  modelos,
   children,
 }: {
   dados: DadosLead;
   desbloqueadoEm: string;
+  modelos: ModelosPorIdioma;
   children?: ReactNode;
 }) {
   const eHospedagem = dados.situacao === "booking";
   const modeloMsg = eHospedagem ? MSG_PADRAO_HOSPEDAGEM : MSG_PADRAO_NEGOCIOS;
   const plataforma = dados.plataforma || (eHospedagem ? "Airbnb ou Booking" : "redes sociais");
+  // Lead de fora do Brasil (aba Internacional).
+  const internacional = !!dados.pais && dados.pais !== "BR";
+  const pais = configPais(dados.pais);
+  const idioma = pais.idiomaMensagem;
+  const msgCurta =
+    idioma === "pt" ? montarMensagem(modeloMsg, dados.nome, plataforma) : preencherModelo(modelos[idioma].curta, dados.nome);
   const data = new Date(desbloqueadoEm).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
   return (
@@ -444,7 +460,17 @@ function CartaoLead({
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="break-words font-sans text-base font-extrabold text-ink">{dados.nome}</h3>
-          {dados.bairro && <p className="mt-0.5 text-sm text-ink-2">{dados.bairro}</p>}
+          {(dados.bairro || internacional) && (
+            <p className="mt-0.5 text-sm text-ink-2">
+              {internacional && (
+                <span title={pais.nome}>
+                  <span aria-hidden="true">{pais.bandeira}</span>
+                  <span className="sr-only">{pais.nome}</span>{" "}
+                </span>
+              )}
+              {dados.bairro}
+            </p>
+          )}
         </div>
       </div>
 
@@ -459,42 +485,67 @@ function CartaoLead({
         )}
       </div>
 
-      <p className="mt-2 flex items-center gap-2 text-sm">
-        <IconeTelefone width={16} height={16} className="shrink-0 text-muted" />
-        {dados.telefone ? (
-          <a href={`tel:${dados.telefone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center font-semibold text-ink underline-offset-2 hover:underline">
-            {dados.telefone}
-          </a>
-        ) : (
-          <span className="text-muted">Sem telefone no Google</span>
-        )}
-      </p>
+      {dados.fuso && (
+        <div className="mt-2">
+          <HoraLocal fuso={dados.fuso} />
+        </div>
+      )}
 
-      <div className="mt-4 flex flex-wrap gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
-        {dados.whatsapp && (
-          <a
-            target="_blank"
-            rel="noopener"
-            href={linkWhatsapp(dados.whatsapp, montarMensagem(modeloMsg, dados.nome, plataforma))}
-            className={BOTAO_WHATSAPP}
-          >
-            <IconeWhatsapp width={18} height={18} />
-            WhatsApp
-          </a>
-        )}
-        {dados.maps && (
-          <a target="_blank" rel="noopener" href={dados.maps} className={BOTAO_NEUTRO}>
-            <IconeMapa width={18} height={18} />
-            Maps
-          </a>
-        )}
-        {dados.site && (
-          <a target="_blank" rel="noopener" href={dados.site} className={BOTAO_NEUTRO}>
-            <IconeLink width={18} height={18} />
-            Link
-          </a>
-        )}
-      </div>
+      {internacional ? (
+        <>
+          <div className="mt-4 flex flex-wrap gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
+            <BotoesContatoInternacional
+              pais={dados.pais}
+              telefone={dados.telefone}
+              whatsapp={dados.whatsapp}
+              maps={dados.maps}
+              site={dados.site}
+              mensagemWhatsapp={msgCurta}
+            />
+          </div>
+          <div className="mt-3">
+            <MensagemPronta pais={dados.pais} nome={dados.nome} modelosPorIdioma={modelos} />
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="mt-2 flex items-center gap-2 text-sm">
+            <IconeTelefone width={16} height={16} className="shrink-0 text-muted" />
+            {dados.telefone ? (
+              <a href={`tel:${dados.telefone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center font-semibold text-ink underline-offset-2 hover:underline">
+                {dados.telefone}
+              </a>
+            ) : (
+              <span className="text-muted">Sem telefone no Google</span>
+            )}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
+            {dados.whatsapp && (
+              <a
+                target="_blank"
+                rel="noopener"
+                href={linkWhatsapp(dados.whatsapp, montarMensagem(modeloMsg, dados.nome, plataforma))}
+                className={BOTAO_WHATSAPP}
+              >
+                <IconeWhatsapp width={18} height={18} />
+                WhatsApp
+              </a>
+            )}
+            {dados.maps && (
+              <a target="_blank" rel="noopener" href={dados.maps} className={BOTAO_NEUTRO}>
+                <IconeMapa width={18} height={18} />
+                Maps
+              </a>
+            )}
+            {dados.site && (
+              <a target="_blank" rel="noopener" href={dados.site} className={BOTAO_NEUTRO}>
+                <IconeLink width={18} height={18} />
+                Link
+              </a>
+            )}
+          </div>
+        </>
+      )}
 
       {children}
 

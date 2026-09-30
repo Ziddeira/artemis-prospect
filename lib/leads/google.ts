@@ -3,6 +3,7 @@
 // GOOGLE_PLACES_API_KEY, que não tem prefixo NEXT_PUBLIC_ e por isso
 // nunca é exposta ao navegador.
 import type { PlaceBruto } from "./classificacao";
+import type { ConfigPais } from "./paises";
 
 export class ErroGooglePlaces extends Error {}
 
@@ -24,6 +25,11 @@ function chaveApi(): string {
 // acompanha sozinho).
 export const PEDIR_AVALIACOES_NA_BUSCA = true;
 
+// utcOffsetMinutes (hora local do lead, aba Internacional) é da faixa
+// "Pro", mais barata que as que a busca e os detalhes já pedem: não muda
+// o preço de nenhuma das duas. O Google cobra pela faixa mais cara entre
+// os campos pedidos.
+
 const CAMPOS_BUSCA = [
   "places.id",
   "places.displayName",
@@ -38,6 +44,7 @@ const CAMPOS_BUSCA = [
   "places.regularOpeningHours",
   "places.primaryTypeDisplayName",
   "places.addressComponents",
+  "places.utcOffsetMinutes",
   ...(PEDIR_AVALIACOES_NA_BUSCA ? ["places.reviews"] : []),
   "nextPageToken",
 ].join(",");
@@ -53,6 +60,7 @@ const CAMPOS_DETALHES = [
   "userRatingCount",
   "googleMapsUri",
   "addressComponents",
+  "utcOffsetMinutes",
 ].join(",");
 
 interface RespostaBusca {
@@ -60,14 +68,18 @@ interface RespostaBusca {
   nextPageToken?: string;
 }
 
+// A região e o idioma vêm do país da busca (lib/leads/paises.ts). O
+// preço é o mesmo em qualquer país: o Google cobra pelos campos pedidos,
+// não pelo lugar pesquisado.
 export async function buscarTexto(
   query: string,
+  pais: ConfigPais,
   pageToken?: string,
 ): Promise<RespostaBusca> {
   const body: Record<string, unknown> = {
     textQuery: query,
-    languageCode: "pt-BR",
-    regionCode: "BR",
+    languageCode: pais.languageCode,
+    regionCode: pais.regionCode,
     pageSize: 20,
   };
   if (pageToken) body.pageToken = pageToken;

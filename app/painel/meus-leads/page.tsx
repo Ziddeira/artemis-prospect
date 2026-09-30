@@ -5,6 +5,7 @@ import { situacaoFunilValida, type StatusVenda, type VendaResumo } from "@/lib/l
 import type { MarcacaoInvalido, MotivoInvalido, SemDevolucao } from "@/lib/leads/invalido";
 import { EstadoVazio, TituloPagina, BOTAO } from "@/components/ui";
 import { IconeSeta } from "@/components/Icones";
+import { lerModelosMensagem } from "@/lib/perfil/modelos";
 import MeusLeadsClient, { type LeadSalvo } from "./MeusLeadsClient";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +121,12 @@ export default async function MeusLeadsPage() {
 
   const leads = montarLeads(resposta.data ?? [], vendas);
 
+  // Modelos de mensagem em inglês do Perfil (leads da aba Internacional).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { modelos } = await lerModelosMensagem(supabase, user?.id ?? "");
+
   return (
     <div>
       <TituloPagina
@@ -134,6 +141,7 @@ export default async function MeusLeadsPage() {
       {leads.length ? (
         <MeusLeadsClient
           leads={leads}
+          modelos={modelos}
           funilAtivo={funilAtivo}
           erroFunil={erroFunil}
           retornoAtivo={retornoAtivo}

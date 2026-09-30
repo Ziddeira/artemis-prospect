@@ -14,12 +14,15 @@ export interface Plano {
   desbloqueios: number;
   buscas: number;
   hospedagem: boolean;
+  // Aba Internacional (EUA e Canadá). Quem confere de verdade é a função
+  // SQL iniciar_busca (etapa 21).
+  internacional: boolean;
 }
 
 export const PLANOS: Record<PlanoId, Plano> = {
-  gratis: { id: "gratis", nome: "Grátis", preco: 0, desbloqueios: 5, buscas: 3, hospedagem: false },
-  solo: { id: "solo", nome: "Solo", preco: 34.9, desbloqueios: 50, buscas: 20, hospedagem: false },
-  pro: { id: "pro", nome: "Pro", preco: 69.9, desbloqueios: 100, buscas: 45, hospedagem: true },
+  gratis: { id: "gratis", nome: "Grátis", preco: 0, desbloqueios: 5, buscas: 3, hospedagem: false, internacional: false },
+  solo: { id: "solo", nome: "Solo", preco: 34.9, desbloqueios: 50, buscas: 20, hospedagem: false, internacional: false },
+  pro: { id: "pro", nome: "Pro", preco: 69.9, desbloqueios: 100, buscas: 45, hospedagem: true, internacional: true },
 };
 
 export const PACOTE_EXTRA = { preco: 24.9, desbloqueios: 25, buscas: 15 };

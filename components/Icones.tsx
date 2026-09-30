@@ -402,3 +402,30 @@ export function IconeTela(props: Props) {
     </Base>
   );
 }
+
+export function IconeRelogio(props: Props) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </Base>
+  );
+}
+
+export function IconeCopiar(props: Props) {
+  return (
+    <Base {...props}>
+      <path d="M9 9h11v11H9z" />
+      <path d="M5 15H4V4h11v1" />
+    </Base>
+  );
+}
+
+export function IconeGlobo(props: Props) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z" />
+    </Base>
+  );
+}

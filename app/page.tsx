@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PACOTE_EXTRA, PLANOS, formatarPreco, type Plano } from "@/lib/planos";
+import { nomesPaisesInternacionais } from "@/lib/leads/paises";
 import { DESCRICAO_SITE, NOME_SITE, TITULO_INICIO, URL_SITE, metadadosPagina } from "@/lib/site";
 import type { Situacao } from "@/lib/leads/classificacao";
 import EtiquetaSituacao from "@/components/leads/EtiquetaSituacao";
@@ -333,6 +334,7 @@ function CartaoPlano({ plano, destaque }: { plano: Plano; destaque: boolean }) {
         </li>
         <li>WhatsApp com mensagem pronta</li>
         <li>{plano.hospedagem ? "Modo Hospedagem incluso" : "Sem modo Hospedagem"}</li>
+        {plano.internacional && <li>Aba Internacional ({nomesPaisesInternacionais()})</li>}
       </ul>
       <Link href="/cadastro" className={`${destaque ? BOTAO : BOTAO_SECUNDARIO} mt-6`}>
         {pago ? `Começar com o ${plano.nome}` : "Criar conta grátis"}

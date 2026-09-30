@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { detalhesLugar, ErroGooglePlaces } from "@/lib/leads/google";
-import { montarDadosLead } from "@/lib/leads/dadosLead";
+import { montarDadosLead, paisDoLugar } from "@/lib/leads/dadosLead";
+import { dominiosDoPais } from "@/lib/leads/dominios";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
 
   try {
     const lugar = await detalhesLugar(placeId);
-    const dados = montarDadosLead(lugar);
+    const dados = montarDadosLead(lugar, await dominiosDoPais(supabase, paisDoLugar(lugar)));
     // Guarda os dados em cache (até 30 dias) para "Meus leads" abrir sem
     // chamar o Google de novo. Se o cache falhar, o desbloqueio segue
     // valendo normalmente.
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
         maps: dados.maps,
         situacao: dados.situacao,
         plataforma: dados.plataforma,
+        fuso: dados.fuso ?? null,
       },
     });
   } catch (e) {

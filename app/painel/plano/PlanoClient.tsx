@@ -10,6 +10,7 @@ import {
   type PlanoId,
   type PlanoPago,
 } from "@/lib/planos";
+import { nomesPaisesInternacionais } from "@/lib/leads/paises";
 import {
   ALERTA_AVISO,
   ALERTA_ERRO,
@@ -345,6 +346,7 @@ export default function PlanoClient({
                 <li>{p.desbloqueios} desbloqueios{p.preco > 0 ? " por mês" : ""}</li>
                 <li>{p.buscas} buscas{p.preco > 0 ? " por mês" : ""}</li>
                 <li>{p.hospedagem ? "Modo Hospedagem incluso" : "Sem modo Hospedagem"}</li>
+                {p.internacional && <li>Aba Internacional ({nomesPaisesInternacionais()})</li>}
               </ul>
               <div className="mt-4">
                 {id === "gratis" ? (

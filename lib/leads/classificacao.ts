@@ -1,7 +1,14 @@
 // Classificação e pontuação de leads, portadas de caca-leads-sem-site.html.
 import type { Confianca } from "./confianca";
+import type { CodigoPais, ConfigPais } from "./paises";
 
-export type Modo = "negocios" | "hospedagem";
+// "internacional" = aba Internacional (plano Pro): busca em outro país,
+// escolhido em lib/leads/paises.ts.
+export type Modo = "negocios" | "hospedagem" | "internacional";
+
+export function ehModo(valor: unknown): valor is Modo {
+  return valor === "negocios" || valor === "hospedagem" || valor === "internacional";
+}
 
 export type Situacao = "sem_site" | "booking" | "rede_social" | "site_proprio";
 
@@ -28,6 +35,8 @@ export interface PlaceBruto {
   // Só a data é usada (selo de confiança); o texto das avaliações nunca
   // é mostrado nem guardado.
   reviews?: { publishTime?: string }[];
+  // Diferença do horário da empresa para o UTC agora (lib/leads/fuso.ts).
+  utcOffsetMinutes?: number;
 }
 
 export interface LeadResultado {
@@ -45,6 +54,12 @@ export interface LeadResultado {
   pontuacao: number;
   area: string;
   modo: Modo;
+  // País da empresa. Vazio = Brasil (buscas salvas antes da aba
+  // Internacional).
+  pais?: CodigoPais;
+  // Fuso da empresa (ex.: "America/Chicago"), para mostrar a hora local.
+  // Só em países de fora; nulo = não deu para saber.
+  fuso?: string | null;
   contato: ContatoLead | null;
   // Selo de confiança (lib/leads/confianca.ts). Buscas salvas antes do
   // selo existir vêm sem ele.
@@ -81,7 +96,9 @@ export const DOMINIOS_RESERVA = [
   "hostelworld.com",
 ];
 
-// Domínios de apps e redes sociais: não contam como site próprio.
+// Domínios de apps e redes sociais: não contam como site próprio. Vale
+// em todos os países; cada país ainda tem a própria lista extra, editável
+// em Gestão > Sites de terceiros (tabela dominios_terceiro, etapa 21).
 export const DOMINIOS_TERCEIRO = [
   "appbarber.com.br",
   "booksy.com",
@@ -145,6 +162,17 @@ const NOMES_PLATAFORMA: Record<string, string> = {
   appbarber: "AppBarber",
   booksy: "Booksy",
   linktr: "Linktree",
+  yelp: "Yelp",
+  squareup: "Square",
+  square: "Square",
+  fresha: "Fresha",
+  vagaro: "Vagaro",
+  thumbtack: "Thumbtack",
+  doordash: "DoorDash",
+  ubereats: "Uber Eats",
+  opentable: "OpenTable",
+  wixsite: "Wix",
+  godaddysites: "GoDaddy",
 };
 
 export function hostDe(url: string): string | null {
@@ -159,12 +187,15 @@ function pertenceALista(host: string, lista: string[]): boolean {
   return lista.some((d) => host === d || host.endsWith("." + d));
 }
 
-export function classificar(url: string | null | undefined): Situacao {
+// dominiosDoPais: a lista extra do país da empresa (vem do banco, ver
+// lib/leads/dominios.ts). A lista fixa acima vale sempre.
+export function classificar(url: string | null | undefined, dominiosDoPais: string[] = []): Situacao {
   if (!url) return "sem_site";
   const host = hostDe(url);
   if (!host) return "sem_site";
   if (pertenceALista(host, DOMINIOS_RESERVA)) return "booking";
   if (pertenceALista(host, DOMINIOS_TERCEIRO)) return "rede_social";
+  if (pertenceALista(host, dominiosDoPais)) return "rede_social";
   return "site_proprio";
 }
 
@@ -191,6 +222,23 @@ export function celularBrasileiro(
   const local = digitos.slice(4);
   if (digitos.length === 13 && local.startsWith("9")) return digitos;
   return null;
+}
+
+// Número para o botão de WhatsApp, só nos países em que WhatsApp é o
+// costume. No Brasil, só celular (dá para reconhecer pelo 9); nos outros,
+// o número internacional inteiro.
+export function whatsappDoLugar(pais: ConfigPais, p: PlaceBruto): string | null {
+  if (!pais.whatsapp) return null;
+  if (pais.codigo === "BR") return celularBrasileiro(p.nationalPhoneNumber, p.internationalPhoneNumber);
+  return (p.internationalPhoneNumber || "").replace(/\D/g, "") || null;
+}
+
+// No Brasil, o formato local "(48) 99999-0000"; nos outros países, o
+// internacional "+1 512-555-0100", que já funciona para ligar daqui.
+export function telefoneDoLugar(pais: ConfigPais, p: PlaceBruto): string | null {
+  const nacional = p.nationalPhoneNumber || null;
+  const internacional = p.internationalPhoneNumber || null;
+  return pais.codigo === "BR" ? nacional || internacional : internacional || nacional;
 }
 
 export function pontuarLead(l: {

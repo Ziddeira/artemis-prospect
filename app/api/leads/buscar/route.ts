@@ -4,12 +4,17 @@ import { buscarTexto, ErroGooglePlaces } from "@/lib/leads/google";
 import { registrarErro } from "@/lib/erros/registrar";
 import { semContato } from "@/lib/leads/ultimaBusca";
 import { avaliacaoMaisRecente, calcularConfianca, fechadoDefinitivo } from "@/lib/leads/confianca";
+import { dominiosDoPais } from "@/lib/leads/dominios";
+import { codigoEstado, codigoPaisDoEndereco, escolherFuso } from "@/lib/leads/fuso";
+import { PAISES, PAIS_PADRAO, ehPaisInternacional, type ConfigPais } from "@/lib/leads/paises";
 import {
-  celularBrasileiro,
   classificar,
+  ehModo,
   extrairBairro,
   nomePlataforma,
   pontuarLead,
+  telefoneDoLugar,
+  whatsappDoLugar,
   type LeadResultado,
   type Modo,
   type PlaceBruto,
@@ -45,6 +50,17 @@ function limparMensagemPostgres(msg: string): string {
   return msg.replace(/^ERROR:\s*/i, "");
 }
 
+// "barber shop in Austin TX, United States". O nome do país no fim evita
+// que o Google traga uma cidade de mesmo nome em outro país.
+function montarConsulta(termo: string, area: string, pais: ConfigPais): string {
+  const consulta = `${termo} ${pais.conectorBusca} ${area}`;
+  if (!pais.nomeNaBusca || area.toLowerCase().includes(pais.nomeNaBusca.toLowerCase())) return consulta;
+  return `${consulta}, ${pais.nomeNaBusca}`;
+}
+
+const MSG_FALTA_ETAPA21 =
+  "A aba Internacional ainda não foi ativada no banco. Rode os scripts supabase/etapa21-1 e etapa21-2 no Supabase.";
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   if (!supabase) {
@@ -61,7 +77,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ erro: "É preciso estar logado." }, { status: 401 });
   }
 
-  let corpo: { nicho?: string; areas?: string; modo?: string };
+  let corpo: { nicho?: string; areas?: string; modo?: string; pais?: string };
   try {
     corpo = await request.json();
   } catch {
@@ -70,7 +86,12 @@ export async function POST(request: Request) {
 
   const termos = dividirLista(corpo.nicho);
   const areas = dividirLista(corpo.areas);
-  const modo: Modo = corpo.modo === "hospedagem" ? "hospedagem" : "negocios";
+  const modo: Modo = ehModo(corpo.modo) ? corpo.modo : "negocios";
+  const internacional = modo === "internacional";
+  if (internacional && !ehPaisInternacional(corpo.pais)) {
+    return NextResponse.json({ erro: "Escolha o país da busca." }, { status: 400 });
+  }
+  const pais = PAISES[internacional && ehPaisInternacional(corpo.pais) ? corpo.pais : PAIS_PADRAO];
 
   if (!termos.length) {
     return NextResponse.json({ erro: "Digite ao menos um nicho." }, { status: 400 });
@@ -86,16 +107,30 @@ export async function POST(request: Request) {
   }
 
   // Confere saldo, plano e o limite de 10 buscas/minuto, e já desconta
-  // tudo de uma vez (função SQL "security definer" — tudo ou nada).
+  // tudo de uma vez (função SQL "security definer" — tudo ou nada). A
+  // regra de cobrança é a mesma em todos os modos: 1 busca por termo ×
+  // região. O país só vai quando a busca é internacional, para Negócios e
+  // Hospedagem continuarem funcionando mesmo antes do SQL da etapa 21.
   const { data: saldoBruto, error: erroSaldo } = await supabase.rpc("iniciar_busca", {
     p_termos: termos,
     p_areas: areas,
     p_modo: modo,
+    ...(internacional ? { p_pais: pais.codigo } : {}),
   });
 
   if (erroSaldo) {
-    return NextResponse.json({ erro: limparMensagemPostgres(erroSaldo.message) }, { status: 400 });
+    // Função sem o parâmetro p_pais (PGRST202) ou modo recusado = etapa
+    // 21 não rodada.
+    const faltaEtapa21 =
+      internacional && (erroSaldo.code === "PGRST202" || /Modo de busca inválido/.test(erroSaldo.message));
+    return NextResponse.json(
+      { erro: faltaEtapa21 ? MSG_FALTA_ETAPA21 : limparMensagemPostgres(erroSaldo.message) },
+      { status: faltaEtapa21 ? 503 : 400 },
+    );
   }
+
+  // Sites de terceiros comuns no país (Gestão > Sites de terceiros).
+  const dominios = await dominiosDoPais(supabase, pais.codigo);
 
   const buscasRestantes = typeof saldoBruto === "number" ? saldoBruto : Number(saldoBruto);
 
@@ -104,6 +139,9 @@ export async function POST(request: Request) {
   // Empresas que o Google marca como fechadas definitivamente: não
   // entram no resultado (nem na busca salva). Só a quantidade é contada.
   const fechadosIds = new Set<string>();
+  // Empresas de outro país (ex.: "London" do Reino Unido numa busca no
+  // Canadá): ficam de fora, o usuário escolheu o país.
+  const deOutroPaisIds = new Set<string>();
   let chamadasGoogle = 0;
   const registrosChamada: PromiseLike<unknown>[] = [];
   let aviso: string | null = null;
@@ -111,12 +149,12 @@ export async function POST(request: Request) {
   try {
     for (const area of areas) {
       for (const termo of termos) {
-        const consulta = `${termo} em ${area}`;
+        const consulta = montarConsulta(termo, area, pais);
         let token: string | undefined;
         let pagina = 0;
         do {
           if (token) await sleep(ESPERA_PROXIMA_PAGINA_MS);
-          const dados = await buscarTexto(consulta, token);
+          const dados = await buscarTexto(consulta, pais, token);
           chamadasGoogle++;
           registrosChamada.push(
             supabase
@@ -129,7 +167,12 @@ export async function POST(request: Request) {
               fechadosIds.add(lugar.id);
               continue;
             }
-            porId.set(lugar.id, montarLead(lugar, area, modo));
+            const paisDoLugar = codigoPaisDoEndereco(lugar.addressComponents);
+            if (internacional && paisDoLugar && paisDoLugar !== pais.codigo) {
+              deOutroPaisIds.add(lugar.id);
+              continue;
+            }
+            porId.set(lugar.id, montarLead(lugar, area, modo, pais, dominios));
             brutoPorId.set(lugar.id, lugar);
           }
           token = dados.nextPageToken;
@@ -146,7 +189,7 @@ export async function POST(request: Request) {
     await registrarErro(
       "busca",
       `A busca parou antes do fim: ${e instanceof Error ? e.message : String(e)}`,
-      { termos, areas, modo, chamadas_google: chamadasGoogle, leads_ate_parar: porId.size },
+      { termos, areas, modo, pais: pais.codigo, chamadas_google: chamadasGoogle, leads_ate_parar: porId.size },
       user.id,
     );
   }
@@ -167,8 +210,8 @@ export async function POST(request: Request) {
       const bruto = brutoPorId.get(linha.place_id);
       if (lead && bruto) {
         lead.contato = {
-          telefone: bruto.nationalPhoneNumber || bruto.internationalPhoneNumber || null,
-          whatsapp: celularBrasileiro(bruto.nationalPhoneNumber, bruto.internationalPhoneNumber),
+          telefone: telefoneDoLugar(pais, bruto),
+          whatsapp: whatsappDoLugar(pais, bruto),
           site: bruto.websiteUri || null,
           maps: bruto.googleMapsUri || null,
         };
@@ -191,6 +234,7 @@ export async function POST(request: Request) {
     p_modo: modo,
     p_leads: semContato(leads),
     p_aviso: aviso,
+    ...(internacional ? { p_pais: pais.codigo } : {}),
   });
   if (erroSalvar) console.error("[leads/buscar] salvar_ultima_busca", erroSalvar.message);
   const salvo = (Array.isArray(salvoBruto) ? salvoBruto[0] : salvoBruto) as
@@ -203,17 +247,25 @@ export async function POST(request: Request) {
     chamadasGoogle,
     aviso,
     fechadosOcultos: fechadosIds.size,
+    deOutroPais: deOutroPaisIds.size,
     termos,
     areas,
     modo,
+    pais: internacional ? pais.codigo : null,
     feitaEm: salvo?.feita_em ?? new Date().toISOString(),
     expiraEm: salvo?.expira_em ?? null,
   });
 }
 
-function montarLead(p: PlaceBruto, area: string, modo: Modo): LeadResultado {
-  const situacao = classificar(p.websiteUri);
-  const celular = celularBrasileiro(p.nationalPhoneNumber, p.internationalPhoneNumber);
+function montarLead(
+  p: PlaceBruto,
+  area: string,
+  modo: Modo,
+  pais: ConfigPais,
+  dominios: string[],
+): LeadResultado {
+  const situacao = classificar(p.websiteUri, dominios);
+  const celular = whatsappDoLugar(pais, p);
   const temTelefone = !!(p.nationalPhoneNumber || p.internationalPhoneNumber);
   const ehPlataforma = situacao === "booking" || situacao === "rede_social";
   return {
@@ -232,7 +284,8 @@ function montarLead(p: PlaceBruto, area: string, modo: Modo): LeadResultado {
       avaliacoes: p.userRatingCount || 0,
       nota: p.rating || 0,
       situacao,
-      celular: !!celular,
+      // Onde WhatsApp não é o costume, o canal que conta é o telefone.
+      celular: pais.whatsapp ? !!celular : temTelefone,
       temHorario: !!p.regularOpeningHours,
     }),
     confianca: calcularConfianca({
@@ -244,6 +297,9 @@ function montarLead(p: PlaceBruto, area: string, modo: Modo): LeadResultado {
     }),
     area,
     modo,
+    ...(modo === "internacional"
+      ? { pais: pais.codigo, fuso: escolherFuso(pais, codigoEstado(p.addressComponents), p.utcOffsetMinutes) }
+      : {}),
     // Os dados de contato em si (telefone, whatsapp, site, maps) nunca
     // são preenchidos aqui: só depois do usuário desbloquear o lead.
     contato: null,

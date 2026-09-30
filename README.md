@@ -208,6 +208,17 @@ cada um no SQL Editor do Supabase:
     ou do prêmio, para devolver no mesmo lugar. Gestão > Leads inválidos
     mostra as marcações e os créditos devolvidos. O selo de confiança
     (verde/amarelo/vermelho) da busca não depende deste script.
+21. `supabase/etapa21-1-internacional-base.sql` e depois
+    `supabase/etapa21-2-internacional-funcoes.sql` — aba Internacional
+    da página Buscar (plano Pro), começando por EUA e Canadá: busca com
+    região e idioma do país, telefone internacional com botão de ligar,
+    hora local da empresa e mensagem pronta em inglês (editável no
+    Perfil). Cria a tabela `dominios_terceiro` (Gestão > Sites de
+    terceiros, uma lista por país) e a coluna `profiles.modelos_mensagem`.
+    A cobrança não muda. Os países ficam em `lib/leads/paises.ts`: para
+    acrescentar outro, basta uma entrada nova ali (o banco não precisa de
+    script novo). Sem este script, Negócios e Hospedagem funcionam como
+    antes e a aba Internacional avisa que falta rodá-lo.
 
 ### Rotinas agendadas (Vercel Cron)
 

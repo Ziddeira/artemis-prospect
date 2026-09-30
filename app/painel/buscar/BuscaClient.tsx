@@ -11,7 +11,14 @@ import {
   linkWhatsapp,
   montarMensagem,
 } from "@/lib/leads/mensagens";
+import {
+  ROTULO_CONFIANCA,
+  passaFiltroConfianca,
+  type FiltroConfianca,
+  type NivelConfianca,
+} from "@/lib/leads/confianca";
 import EtiquetaSituacao from "@/components/leads/EtiquetaSituacao";
+import SeloConfianca from "@/components/leads/SeloConfianca";
 import Score from "@/components/marca/Score";
 import LimitePlano from "@/components/marca/LimitePlano";
 import { ListaEsqueleto } from "@/components/leads/CartaoLeadEsqueleto";
@@ -109,6 +116,8 @@ export default function BuscaClient({
   const [limpando, setLimpando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(salvaValida?.aviso ?? null);
+  // Quantas empresas fechadas definitivamente a última busca escondeu.
+  const [fechadosOcultos, setFechadosOcultos] = useState(0);
   const [buscaFeita, setBuscaFeita] = useState(!!salvaValida);
   const [infoBusca, setInfoBusca] = useState<InfoBusca | null>(salvaValida ? infoDe(salvaValida) : null);
   // Busca salva que passou do prazo do cache do Google: a lista foi
@@ -125,6 +134,7 @@ export default function BuscaClient({
   const [apenasCelular, setApenasCelular] = useState(false);
   const [apenasAberto, setApenasAberto] = useState(true);
   const [esconderDesbloqueados, setEsconderDesbloqueados] = useState(false);
+  const [filtroConfianca, setFiltroConfianca] = useState<FiltroConfianca>("todos");
   const [ordenarPor, setOrdenarPor] = useState<keyof typeof ORDENS>("pontuacao");
   const [situacoesAtivas, setSituacoesAtivas] = useState<Record<Situacao, boolean>>({
     sem_site: true,
@@ -145,6 +155,13 @@ export default function BuscaClient({
     return c;
   }, [leads]);
 
+  const contagensConfianca = useMemo(() => {
+    const c: Record<NivelConfianca, number> = { verde: 0, amarelo: 0, vermelho: 0 };
+    for (const l of leads) if (l.confianca) c[l.confianca.nivel]++;
+    return c;
+  }, [leads]);
+  const temSelo = contagensConfianca.verde + contagensConfianca.amarelo + contagensConfianca.vermelho > 0;
+
   const leadsFiltrados = useMemo(() => {
     const texto = textoEndereco.trim().toLowerCase();
     return leads
@@ -155,6 +172,7 @@ export default function BuscaClient({
           l.avaliacoes >= minAvaliacoes &&
           (!apenasCelular || l.temCelular) &&
           (!apenasAberto || l.aberto) &&
+          passaFiltroConfianca(l.confianca, filtroConfianca) &&
           (!esconderDesbloqueados || !l.contato) &&
           (!texto || l.bairro.toLowerCase().includes(texto)),
       )
@@ -166,6 +184,7 @@ export default function BuscaClient({
     minAvaliacoes,
     apenasCelular,
     apenasAberto,
+    filtroConfianca,
     esconderDesbloqueados,
     textoEndereco,
     ordenarPor,
@@ -182,6 +201,7 @@ export default function BuscaClient({
   async function buscar() {
     setErro(null);
     setAviso(null);
+    setFechadosOcultos(0);
     if (!termos.length) return setErro("Digite ao menos um nicho.");
     if (!listaAreas.length) return setErro("Digite ao menos uma região.");
     if (modo === "hospedagem" && !podeHospedagem) {
@@ -209,6 +229,7 @@ export default function BuscaClient({
       setLeads(dados.leads as LeadResultado[]);
       setPerfil((p) => ({ ...p, buscasRestantes: dados.buscasRestantes }));
       setAviso(dados.aviso || null);
+      setFechadosOcultos(Number(dados.fechadosOcultos) || 0);
       setBuscaFeita(true);
       setExpirada(null);
       setInfoBusca({
@@ -244,6 +265,7 @@ export default function BuscaClient({
       setInfoBusca(null);
       setExpirada(null);
       setAviso(null);
+      setFechadosOcultos(0);
       setNicho("");
       setAreas("");
     } catch {
@@ -258,6 +280,12 @@ export default function BuscaClient({
     if (!lead.desbloqueado && perfil.creditosDesbloqueio < 1) {
       setErro("Você não tem créditos de desbloqueio disponíveis.");
       return;
+    }
+    if (!lead.desbloqueado && lead.confianca?.nivel === "vermelho") {
+      const ok = window.confirm(
+        `Este lead parece inativo (${lead.confianca.motivo}). Tem certeza que quer usar 1 crédito?`,
+      );
+      if (!ok) return;
     }
     setDesbloqueando((d) => ({ ...d, [lead.id]: true }));
     try {
@@ -515,6 +543,43 @@ export default function BuscaClient({
               </div>
             </div>
 
+            {temSelo && (
+              <fieldset className={`${CARTAO} p-4`}>
+                <legend className="sr-only">Confiança</legend>
+                <h2 aria-hidden="true" className="mb-1 text-[13px] font-semibold uppercase tracking-[0.2em] text-ink">
+                  Confiança
+                </h2>
+                <p className="mb-1 text-xs text-muted">Se a empresa parece ainda existir e atender.</p>
+                <div className="flex flex-col text-sm">
+                  {(
+                    [
+                      ["todos", "Todos", leads.length],
+                      [
+                        "verde_amarelo",
+                        `${ROTULO_CONFIANCA.verde} e ${ROTULO_CONFIANCA.amarelo.toLowerCase()}`,
+                        contagensConfianca.verde + contagensConfianca.amarelo,
+                      ],
+                      ["verde", `Só ${ROTULO_CONFIANCA.verde.toLowerCase()}`, contagensConfianca.verde],
+                    ] as [FiltroConfianca, string, number][]
+                  ).map(([valor, rotulo, qtd]) => (
+                    <label key={valor} className="flex min-h-11 cursor-pointer items-center justify-between gap-2 text-ink-2">
+                      <span className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="filtro-confianca"
+                          className={CHECKBOX}
+                          checked={filtroConfianca === valor}
+                          onChange={() => setFiltroConfianca(valor)}
+                        />
+                        {rotulo}
+                      </span>
+                      <span className="font-semibold text-muted">{qtd}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
             <div className={`${CARTAO} p-4`}>
               <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.2em] text-ink">Filtros</h2>
               <div className="grid grid-cols-2 gap-2">
@@ -579,6 +644,13 @@ export default function BuscaClient({
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-ink-2" aria-live="polite">
                 <strong className="font-display text-ink">{leadsFiltrados.length}</strong> de {leads.length} leads
+                {fechadosOcultos > 0 && (
+                  <span className="text-muted">
+                    {" "}
+                    · {fechadosOcultos} {fechadosOcultos === 1 ? "empresa fechada" : "empresas fechadas"} definitivamente{" "}
+                    {fechadosOcultos === 1 ? "ficou" : "ficaram"} de fora
+                  </span>
+                )}
               </p>
               <label htmlFor="ordenar" className="sr-only">Ordenar por</label>
               <select
@@ -610,7 +682,7 @@ export default function BuscaClient({
                   titulo={leads.length ? "Nenhum lead com esses filtros" : "A busca não trouxe resultados"}
                   texto={
                     leads.length
-                      ? "Baixe a nota mínima, zere as avaliações ou ative mais categorias para ver mais leads."
+                      ? "Baixe a nota mínima, zere as avaliações, inclua mais níveis de confiança ou ative mais categorias para ver mais leads."
                       : "Tente um nicho mais comum ou uma região maior (o nome da cidade, por exemplo)."
                   }
                 />
@@ -660,8 +732,13 @@ function LeadCard({
             ) : (
               <span className="text-muted">Sem avaliações</span>
             )}
-            {!lead.aberto && <span className="font-semibold text-danger">Fechado</span>}
+            {!lead.aberto && !lead.confianca && <span className="font-semibold text-danger">Fechado</span>}
           </div>
+          {lead.confianca && (
+            <div className="mt-2">
+              <SeloConfianca confianca={lead.confianca} />
+            </div>
+          )}
         </div>
       </div>
 

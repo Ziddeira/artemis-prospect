@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buscarTexto, ErroGooglePlaces } from "@/lib/leads/google";
 import { registrarErro } from "@/lib/erros/registrar";
 import { semContato } from "@/lib/leads/ultimaBusca";
+import { avaliacaoMaisRecente, calcularConfianca, fechadoDefinitivo } from "@/lib/leads/confianca";
 import {
   celularBrasileiro,
   classificar,
@@ -100,6 +101,9 @@ export async function POST(request: Request) {
 
   const porId = new Map<string, LeadResultado>();
   const brutoPorId = new Map<string, PlaceBruto>();
+  // Empresas que o Google marca como fechadas definitivamente: não
+  // entram no resultado (nem na busca salva). Só a quantidade é contada.
+  const fechadosIds = new Set<string>();
   let chamadasGoogle = 0;
   const registrosChamada: PromiseLike<unknown>[] = [];
   let aviso: string | null = null;
@@ -121,6 +125,10 @@ export async function POST(request: Request) {
           );
           for (const lugar of dados.places || []) {
             if (!lugar.id || porId.has(lugar.id)) continue;
+            if (fechadoDefinitivo(lugar.businessStatus)) {
+              fechadosIds.add(lugar.id);
+              continue;
+            }
             porId.set(lugar.id, montarLead(lugar, area, modo));
             brutoPorId.set(lugar.id, lugar);
           }
@@ -194,6 +202,7 @@ export async function POST(request: Request) {
     buscasRestantes,
     chamadasGoogle,
     aviso,
+    fechadosOcultos: fechadosIds.size,
     termos,
     areas,
     modo,
@@ -205,6 +214,7 @@ export async function POST(request: Request) {
 function montarLead(p: PlaceBruto, area: string, modo: Modo): LeadResultado {
   const situacao = classificar(p.websiteUri);
   const celular = celularBrasileiro(p.nationalPhoneNumber, p.internationalPhoneNumber);
+  const temTelefone = !!(p.nationalPhoneNumber || p.internationalPhoneNumber);
   const ehPlataforma = situacao === "booking" || situacao === "rede_social";
   return {
     id: p.id,
@@ -217,13 +227,20 @@ function montarLead(p: PlaceBruto, area: string, modo: Modo): LeadResultado {
     tipo: p.primaryTypeDisplayName?.text || "",
     aberto: !p.businessStatus || p.businessStatus === "OPERATIONAL",
     temCelular: !!celular,
-    temTelefone: !!(p.nationalPhoneNumber || p.internationalPhoneNumber),
+    temTelefone,
     pontuacao: pontuarLead({
       avaliacoes: p.userRatingCount || 0,
       nota: p.rating || 0,
       situacao,
       celular: !!celular,
       temHorario: !!p.regularOpeningHours,
+    }),
+    confianca: calcularConfianca({
+      status: p.businessStatus,
+      ultimaAvaliacao: avaliacaoMaisRecente(p.reviews),
+      avaliacoes: p.userRatingCount || 0,
+      temHorario: !!p.regularOpeningHours,
+      temTelefone,
     }),
     area,
     modo,

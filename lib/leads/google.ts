@@ -16,6 +16,14 @@ function chaveApi(): string {
   return chave;
 }
 
+// Pede as avaliações na busca de texto só para saber a data da mais
+// recente (selo de confiança). Custo: a busca passa da faixa
+// "Enterprise" (US$ 35 por mil páginas) para "Enterprise + Atmosphere"
+// (US$ 40 por mil). Com false, o selo continua funcionando, só sem o
+// critério da data — e o preço volta para US$ 35 (lib/admin/custos.ts
+// acompanha sozinho).
+export const PEDIR_AVALIACOES_NA_BUSCA = true;
+
 const CAMPOS_BUSCA = [
   "places.id",
   "places.displayName",
@@ -30,6 +38,7 @@ const CAMPOS_BUSCA = [
   "places.regularOpeningHours",
   "places.primaryTypeDisplayName",
   "places.addressComponents",
+  ...(PEDIR_AVALIACOES_NA_BUSCA ? ["places.reviews"] : []),
   "nextPageToken",
 ].join(",");
 

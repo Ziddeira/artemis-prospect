@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cacheValido, type DadosLead } from "@/lib/leads/dadosLead";
 import { situacaoFunilValida, type StatusVenda, type VendaResumo } from "@/lib/leads/funil";
+import type { MarcacaoInvalido, MotivoInvalido, SemDevolucao } from "@/lib/leads/invalido";
 import { EstadoVazio, TituloPagina, BOTAO } from "@/components/ui";
 import { IconeSeta } from "@/components/Icones";
 import MeusLeadsClient, { type LeadSalvo } from "./MeusLeadsClient";
@@ -18,6 +19,13 @@ interface Linha {
   ultimo_contato_em?: string | null;
   retorno_em?: string | null;
   retorno_obs?: string | null;
+}
+
+interface LinhaInvalido {
+  place_id: string;
+  motivo: MotivoInvalido;
+  credito_devolvido: boolean;
+  sem_devolucao: SemDevolucao | null;
 }
 
 interface LinhaVenda {
@@ -96,6 +104,20 @@ export default async function MeusLeadsPage() {
     vendas = r.data ?? [];
   }
 
+  // Leads já marcados como inválidos (etapa 20). Sem o SQL da etapa 20,
+  // o botão "Lead inválido?" simplesmente não aparece.
+  const invalidos = await supabase
+    .from("leads_invalidos")
+    .select("place_id, motivo, credito_devolvido, sem_devolucao")
+    .returns<LinhaInvalido[]>();
+  const invalidoAtivo = !invalidos.error;
+  const marcacoes: Record<string, MarcacaoInvalido> = Object.fromEntries(
+    (invalidos.data ?? []).map((i) => [
+      i.place_id,
+      { motivo: i.motivo, devolvido: i.credito_devolvido, semDevolucao: i.sem_devolucao },
+    ]),
+  );
+
   const leads = montarLeads(resposta.data ?? [], vendas);
 
   return (
@@ -110,7 +132,14 @@ export default async function MeusLeadsPage() {
       />
 
       {leads.length ? (
-        <MeusLeadsClient leads={leads} funilAtivo={funilAtivo} erroFunil={erroFunil} retornoAtivo={retornoAtivo} />
+        <MeusLeadsClient
+          leads={leads}
+          funilAtivo={funilAtivo}
+          erroFunil={erroFunil}
+          retornoAtivo={retornoAtivo}
+          invalidoAtivo={invalidoAtivo}
+          marcacoesIniciais={marcacoes}
+        />
       ) : (
         <div className="mt-8">
           <EstadoVazio

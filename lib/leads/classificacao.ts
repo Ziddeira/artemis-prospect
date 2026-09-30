@@ -1,4 +1,5 @@
 // Classificação e pontuação de leads, portadas de caca-leads-sem-site.html.
+import type { Confianca } from "./confianca";
 
 export type Modo = "negocios" | "hospedagem";
 
@@ -24,6 +25,9 @@ export interface PlaceBruto {
   regularOpeningHours?: unknown;
   primaryTypeDisplayName?: { text?: string };
   addressComponents?: AddressComponent[];
+  // Só a data é usada (selo de confiança); o texto das avaliações nunca
+  // é mostrado nem guardado.
+  reviews?: { publishTime?: string }[];
 }
 
 export interface LeadResultado {
@@ -42,6 +46,9 @@ export interface LeadResultado {
   area: string;
   modo: Modo;
   contato: ContatoLead | null;
+  // Selo de confiança (lib/leads/confianca.ts). Buscas salvas antes do
+  // selo existir vêm sem ele.
+  confianca?: Confianca;
   // Já desbloqueado antes, mas sem o contato à mão (cache vencido):
   // desbloquear de novo não cobra.
   desbloqueado?: boolean;

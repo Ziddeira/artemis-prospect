@@ -196,6 +196,18 @@ cada um no SQL Editor do Supabase:
     para a escolha valer em qualquer aparelho. Sem este script, o botão
     de tema funciona do mesmo jeito, mas a escolha fica só no aparelho
     (cookie). As cores dos dois temas ficam em `app/globals.css`.
+19. `supabase/etapa19-1-cupons-base.sql` e depois
+    `supabase/etapa19-2-cupons-funcoes.sql` — promoções e cupons de
+    desconto para os planos (Gestão > Promoções).
+20. `supabase/etapa20-1-leads-invalidos.sql` e depois
+    `supabase/etapa20-2-leads-invalidos-admin.sql` — validação de
+    veracidade do lead. Em "Meus leads", o usuário marca um lead como
+    "empresa não existe mais" ou "telefone não atende" e recebe 1 crédito
+    de volta na hora (no máximo 3 por mês, só para leads desbloqueados há
+    até 30 dias). O desbloqueio passa a anotar se o crédito saiu do plano
+    ou do prêmio, para devolver no mesmo lugar. Gestão > Leads inválidos
+    mostra as marcações e os créditos devolvidos. O selo de confiança
+    (verde/amarelo/vermelho) da busca não depende deste script.
 
 ### Rotinas agendadas (Vercel Cron)
 

@@ -1,10 +1,14 @@
+import { PEDIR_AVALIACOES_NA_BUSCA } from "@/lib/leads/google";
+
 // Preço estimado de cada chamada à Places API (New) do Google, em
 // dólares. Os campos pedidos (telefone, site, nota, horário) caem na
-// faixa "Enterprise" da tabela do Google. Confira a tabela atual em
+// faixa "Enterprise" da tabela do Google; na busca de texto, pedir as
+// avaliações (selo de confiança) sobe para "Enterprise + Atmosphere".
+// Confira a tabela atual em
 // https://developers.google.com/maps/billing-and-pricing/pricing e ajuste
 // aqui se mudar. A conta não desconta a franquia gratuita mensal.
 export const PRECO_USD_POR_CHAMADA: Record<string, number> = {
-  places_text_search: 35 / 1000,
+  places_text_search: (PEDIR_AVALIACOES_NA_BUSCA ? 40 : 35) / 1000,
   place_details: 20 / 1000,
   verificacao_venda: 20 / 1000,
 };

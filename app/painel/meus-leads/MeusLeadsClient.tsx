@@ -23,6 +23,8 @@ import FunilLead, { type FunilEstado } from "@/components/leads/FunilLead";
 import FormVenda from "@/components/leads/FormVenda";
 import FormRetorno from "@/components/leads/FormRetorno";
 import RetornoLead from "@/components/leads/RetornoLead";
+import MarcarInvalido from "@/components/leads/MarcarInvalido";
+import type { MarcacaoInvalido } from "@/lib/leads/invalido";
 import { MSG_FALTA_ETAPA10, statusRetorno, type RetornoLead as Retorno } from "@/lib/leads/retorno";
 import { ALERTA_AVISO, BOTAO_NEUTRO, BOTAO_WHATSAPP, CAMPO, CARTAO } from "@/components/ui";
 import {
@@ -62,13 +64,20 @@ export default function MeusLeadsClient({
   funilAtivo,
   erroFunil = null,
   retornoAtivo = false,
+  invalidoAtivo = false,
+  marcacoesIniciais = {},
 }: {
   leads: LeadSalvo[];
   funilAtivo: boolean;
   erroFunil?: string | null;
   // false = a etapa 10 ainda não foi rodada no Supabase.
   retornoAtivo?: boolean;
+  // false = a etapa 20 ainda não foi rodada no Supabase.
+  invalidoAtivo?: boolean;
+  // Leads já marcados como inválidos, por place_id.
+  marcacoesIniciais?: Record<string, MarcacaoInvalido>;
 }) {
+  const [marcacoes, setMarcacoes] = useState(marcacoesIniciais);
   const [estados, setEstados] = useState<Record<string, Estado>>(() =>
     Object.fromEntries(
       leads.map((l) => [l.placeId, { dados: l.dados, carregando: !l.dados, erro: null }]),
@@ -322,6 +331,14 @@ export default function MeusLeadsClient({
                         </p>
                       )}
                     </>
+                  )}
+                  {invalidoAtivo && (
+                    <MarcarInvalido
+                      placeId={lead.placeId}
+                      nomeLead={estado.dados.nome}
+                      marcacao={marcacoes[lead.placeId] ?? null}
+                      onMarcado={(m) => setMarcacoes((atual) => ({ ...atual, [lead.placeId]: m }))}
+                    />
                   )}
                 </CartaoLead>
               ) : estado?.erro ? (

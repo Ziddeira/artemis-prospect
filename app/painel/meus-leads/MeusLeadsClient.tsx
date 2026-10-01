@@ -21,7 +21,12 @@ import {
 import { configPais } from "@/lib/leads/paises";
 import type { ModelosPorIdioma } from "@/lib/perfil/modelos";
 import HoraLocal from "@/components/leads/HoraLocal";
-import { BotoesContatoInternacional, MensagemPronta } from "@/components/leads/ContatoInternacional";
+import {
+  BotoesContatoInternacional,
+  MensagemPronta,
+  idiomaMensagemLead,
+} from "@/components/leads/ContatoInternacional";
+import SeloBrasileiro from "@/components/leads/SeloBrasileiro";
 import EtiquetaSituacao from "@/components/leads/EtiquetaSituacao";
 import CartaoLeadEsqueleto from "@/components/leads/CartaoLeadEsqueleto";
 import FunilLead, { type FunilEstado } from "@/components/leads/FunilLead";
@@ -444,9 +449,11 @@ function CartaoLead({
   // Lead de fora do Brasil (aba Internacional).
   const internacional = !!dados.pais && dados.pais !== "BR";
   const pais = configPais(dados.pais);
-  const idioma = pais.idiomaMensagem;
-  const msgCurta =
-    idioma === "pt" ? montarMensagem(modeloMsg, dados.nome, plataforma) : preencherModelo(modelos[idioma].curta, dados.nome);
+  // Provável negócio brasileiro lá fora: mensagem em português e WhatsApp.
+  const brasileiro = internacional && !!dados.brasileiro;
+  const msgCurta = internacional
+    ? preencherModelo(modelos[idiomaMensagemLead(dados.pais, brasileiro)].curta, dados.nome)
+    : montarMensagem(modeloMsg, dados.nome, plataforma);
   const data = new Date(desbloqueadoEm).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
   return (
@@ -485,9 +492,10 @@ function CartaoLead({
         )}
       </div>
 
-      {dados.fuso && (
-        <div className="mt-2">
-          <HoraLocal fuso={dados.fuso} />
+      {(dados.fuso || (internacional && dados.brasileiro)) && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {internacional && dados.brasileiro && <SeloBrasileiro sinal={dados.brasileiro} />}
+          {dados.fuso && <HoraLocal fuso={dados.fuso} />}
         </div>
       )}
 
@@ -501,10 +509,11 @@ function CartaoLead({
               maps={dados.maps}
               site={dados.site}
               mensagemWhatsapp={msgCurta}
+              brasileiro={brasileiro}
             />
           </div>
           <div className="mt-3">
-            <MensagemPronta pais={dados.pais} nome={dados.nome} modelosPorIdioma={modelos} />
+            <MensagemPronta pais={dados.pais} nome={dados.nome} modelosPorIdioma={modelos} brasileiro={brasileiro} />
           </div>
         </>
       ) : (

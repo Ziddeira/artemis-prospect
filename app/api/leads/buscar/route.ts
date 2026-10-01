@@ -5,6 +5,8 @@ import { registrarErro } from "@/lib/erros/registrar";
 import { semContato } from "@/lib/leads/ultimaBusca";
 import { avaliacaoMaisRecente, calcularConfianca, fechadoDefinitivo } from "@/lib/leads/confianca";
 import { dominiosDoPais } from "@/lib/leads/dominios";
+import { brasileiroDoLugar } from "@/lib/leads/brasileiro";
+import { palavrasBrasileiras } from "@/lib/leads/listasBrasileiras";
 import { codigoEstado, codigoPaisDoEndereco, escolherFuso } from "@/lib/leads/fuso";
 import { PAISES, PAIS_PADRAO, ehPaisInternacional, type ConfigPais } from "@/lib/leads/paises";
 import {
@@ -131,6 +133,9 @@ export async function POST(request: Request) {
 
   // Sites de terceiros comuns no país (Gestão > Sites de terceiros).
   const dominios = await dominiosDoPais(supabase, pais.codigo);
+  // Palavras do nome que indicam provável negócio brasileiro (Gestão >
+  // Negócio brasileiro). Só a aba Internacional usa.
+  const palavras = internacional ? await palavrasBrasileiras(supabase) : [];
 
   const buscasRestantes = typeof saldoBruto === "number" ? saldoBruto : Number(saldoBruto);
 
@@ -172,7 +177,7 @@ export async function POST(request: Request) {
               deOutroPaisIds.add(lugar.id);
               continue;
             }
-            porId.set(lugar.id, montarLead(lugar, area, modo, pais, dominios));
+            porId.set(lugar.id, montarLead(lugar, area, modo, pais, dominios, palavras));
             brutoPorId.set(lugar.id, lugar);
           }
           token = dados.nextPageToken;
@@ -263,6 +268,7 @@ function montarLead(
   modo: Modo,
   pais: ConfigPais,
   dominios: string[],
+  palavras: string[],
 ): LeadResultado {
   const situacao = classificar(p.websiteUri, dominios);
   const celular = whatsappDoLugar(pais, p);
@@ -298,7 +304,11 @@ function montarLead(
     area,
     modo,
     ...(modo === "internacional"
-      ? { pais: pais.codigo, fuso: escolherFuso(pais, codigoEstado(p.addressComponents), p.utcOffsetMinutes) }
+      ? {
+          pais: pais.codigo,
+          fuso: escolherFuso(pais, codigoEstado(p.addressComponents), p.utcOffsetMinutes),
+          brasileiro: brasileiroDoLugar(p, palavras),
+        }
       : {}),
     // Os dados de contato em si (telefone, whatsapp, site, maps) nunca
     // são preenchidos aqui: só depois do usuário desbloquear o lead.

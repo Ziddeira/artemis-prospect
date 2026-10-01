@@ -19,7 +19,13 @@ import {
 } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import type { DadosPerfil } from "@/lib/perfil/dados";
-import { LIMITES_MODELO, MODELOS_PADRAO, preencherModelo, type ModelosMensagem } from "@/lib/leads/mensagens";
+import {
+  LIMITES_MODELO,
+  MODELOS_PADRAO,
+  preencherModelo,
+  type IdiomaModelo,
+  type ModelosMensagem,
+} from "@/lib/leads/mensagens";
 import {
   APELIDO_MAX,
   SENHA_MIN,
@@ -44,6 +50,7 @@ export default function PerfilClient({
   mostrarVendas,
   acesso,
   modelosIngles,
+  modelosPortugues,
   modelosAtivos,
 }: {
   userId: string;
@@ -57,6 +64,8 @@ export default function PerfilClient({
   acesso: FormasDeEntrar;
   // Modelos de mensagem em inglês (aba Internacional).
   modelosIngles: ModelosMensagem;
+  // Modelos em português para prováveis negócios brasileiros lá fora.
+  modelosPortugues: ModelosMensagem;
   // false = etapa 21 ainda não rodada no banco.
   modelosAtivos: boolean;
 }) {
@@ -96,20 +105,51 @@ export default function PerfilClient({
         </div>
       </div>
 
-      <CartaoMensagensIngles modelos={modelosIngles} ativo={modelosAtivos} />
+      <CartaoMensagens idioma="en" modelos={modelosIngles} ativo={modelosAtivos} />
+      <CartaoMensagens idioma="pt" modelos={modelosPortugues} ativo={modelosAtivos} />
     </div>
   );
 }
 
-// Mensagens em inglês ------------------------------------------------------
+// Mensagens da aba Internacional ------------------------------------------
 // Modelos usados nos leads da aba Internacional (plano Pro): um e-mail com
 // assunto e uma mensagem curta, para formulário de contato ou mensagem
-// direta. Os modelos em português (WhatsApp) continuam os mesmos.
-function CartaoMensagensIngles({ modelos, ativo }: { modelos: ModelosMensagem; ativo: boolean }) {
+// direta. Em inglês para os leads em geral; em português para os
+// prováveis negócios brasileiros (a curta também vai no WhatsApp). Os
+// modelos de WhatsApp dos leads do Brasil continuam os mesmos.
+const TEXTOS_CARTAO: Record<
+  IdiomaModelo,
+  { titulo: string; descricao: string; curta: string; exemplo: string }
+> = {
+  en: {
+    titulo: "Mensagens em inglês",
+    descricao: "Usadas nos leads da aba Internacional (plano Pro), com o botão de copiar.",
+    curta: "Mensagem curta (formulário de contato ou mensagem direta)",
+    exemplo: "Joe's Barber Shop",
+  },
+  pt: {
+    titulo: "Mensagens para brasileiros no exterior",
+    descricao:
+      "Usadas nos leads da aba Internacional marcados como “Provável negócio brasileiro”, no lugar das mensagens em inglês.",
+    curta: "Mensagem curta (WhatsApp, formulário de contato ou mensagem direta)",
+    exemplo: "Açaí do Rio",
+  },
+};
+
+function CartaoMensagens({
+  idioma,
+  modelos,
+  ativo,
+}: {
+  idioma: IdiomaModelo;
+  modelos: ModelosMensagem;
+  ativo: boolean;
+}) {
   const [valores, setValores] = useState(modelos);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<Mensagem>(null);
-  const padrao = MODELOS_PADRAO.en;
+  const padrao = MODELOS_PADRAO[idioma];
+  const textos = TEXTOS_CARTAO[idioma];
   const ehPadrao =
     valores.emailAssunto === padrao.emailAssunto &&
     valores.emailCorpo === padrao.emailCorpo &&
@@ -127,7 +167,7 @@ function CartaoMensagensIngles({ modelos, ativo }: { modelos: ModelosMensagem; a
       return;
     }
     setSalvando(true);
-    const erro = await chamar("/api/perfil/mensagens", "PATCH", { idioma: "en", modelos: valores });
+    const erro = await chamar("/api/perfil/mensagens", "PATCH", { idioma, modelos: valores });
     setSalvando(false);
     setMensagem(erro ? { tipo: "erro", texto: erro } : { tipo: "ok", texto: "Modelos salvos." });
   }
@@ -136,7 +176,7 @@ function CartaoMensagensIngles({ modelos, ativo }: { modelos: ModelosMensagem; a
     if (!window.confirm("Voltar aos modelos padrão? O que você escreveu aqui será apagado.")) return;
     setMensagem(null);
     setSalvando(true);
-    const erro = await chamar("/api/perfil/mensagens", "PATCH", { idioma: "en", modelos: null });
+    const erro = await chamar("/api/perfil/mensagens", "PATCH", { idioma, modelos: null });
     setSalvando(false);
     if (erro) {
       setMensagem({ tipo: "erro", texto: erro });
@@ -147,30 +187,30 @@ function CartaoMensagensIngles({ modelos, ativo }: { modelos: ModelosMensagem; a
   }
 
   return (
-    <section id="mensagens-ingles" aria-labelledby="titulo-mensagens-ingles" className={CARTAO}>
-      <h2 id="titulo-mensagens-ingles" className={TITULO_CARTAO}>
-        Mensagens em inglês
+    <section id={`mensagens-${idioma}`} aria-labelledby={`titulo-mensagens-${idioma}`} className={CARTAO}>
+      <h2 id={`titulo-mensagens-${idioma}`} className={TITULO_CARTAO}>
+        {textos.titulo}
       </h2>
       <p className="mt-1 mb-4 text-sm text-ink-2">
-        Usadas nos leads da aba Internacional (plano Pro), com o botão de copiar. Escreva{" "}
+        {textos.descricao} Escreva{" "}
         <code className="font-semibold text-ink">{"{nome}"}</code> onde deve entrar o nome da empresa. As
-        mensagens em português, de WhatsApp, continuam as mesmas.
+        mensagens de WhatsApp dos leads do Brasil continuam as mesmas.
       </p>
       {!ativo && (
         <p className={`${ALERTA_AVISO} mb-4`}>
-          Os modelos em inglês ainda não foram ativados no banco. Rode os scripts supabase/etapa21-1 e
+          Os modelos de mensagem ainda não foram ativados no banco. Rode os scripts supabase/etapa21-1 e
           etapa21-2 no Supabase. Até lá, valem os modelos padrão.
         </p>
       )}
       <form onSubmit={salvar} className="grid gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4">
           <div>
-            <label htmlFor="modelo-assunto" className={ROTULO}>
+            <label htmlFor={`modelo-assunto-${idioma}`} className={ROTULO}>
               E-mail: assunto
             </label>
             <input
-              id="modelo-assunto"
-              lang="en"
+              id={`modelo-assunto-${idioma}`}
+              lang={idioma}
               className={CAMPO}
               maxLength={LIMITES_MODELO.emailAssunto}
               value={valores.emailAssunto}
@@ -179,12 +219,12 @@ function CartaoMensagensIngles({ modelos, ativo }: { modelos: ModelosMensagem; a
             />
           </div>
           <div>
-            <label htmlFor="modelo-email" className={ROTULO}>
+            <label htmlFor={`modelo-email-${idioma}`} className={ROTULO}>
               E-mail: texto
             </label>
             <textarea
-              id="modelo-email"
-              lang="en"
+              id={`modelo-email-${idioma}`}
+              lang={idioma}
               rows={9}
               className={`${CAMPO} resize-y`}
               maxLength={LIMITES_MODELO.emailCorpo}
@@ -197,12 +237,12 @@ function CartaoMensagensIngles({ modelos, ativo }: { modelos: ModelosMensagem; a
         </div>
         <div className="flex flex-col gap-4">
           <div>
-            <label htmlFor="modelo-curta" className={ROTULO}>
-              Mensagem curta (formulário de contato ou mensagem direta)
+            <label htmlFor={`modelo-curta-${idioma}`} className={ROTULO}>
+              {textos.curta}
             </label>
             <textarea
-              id="modelo-curta"
-              lang="en"
+              id={`modelo-curta-${idioma}`}
+              lang={idioma}
               rows={5}
               className={`${CAMPO} resize-y`}
               maxLength={LIMITES_MODELO.curta}
@@ -212,9 +252,9 @@ function CartaoMensagensIngles({ modelos, ativo }: { modelos: ModelosMensagem; a
             />
           </div>
           <div>
-            <p className={ROTULO}>Como fica (exemplo com “Joe&apos;s Barber Shop”)</p>
-            <p lang="en" className="whitespace-pre-line border border-line bg-canvas px-3 py-2 text-sm text-ink-2">
-              {preencherModelo(valores.curta, "Joe's Barber Shop")}
+            <p className={ROTULO}>Como fica (exemplo com “{textos.exemplo}”)</p>
+            <p lang={idioma} className="whitespace-pre-line border border-line bg-canvas px-3 py-2 text-sm text-ink-2">
+              {preencherModelo(valores.curta, textos.exemplo)}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

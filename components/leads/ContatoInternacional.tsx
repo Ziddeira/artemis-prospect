@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { NOME_IDIOMA, linkWhatsapp, preencherModelo, type ModelosMensagem } from "@/lib/leads/mensagens";
+import { NOME_IDIOMA, linkWhatsapp, preencherModelo, type IdiomaModelo, type ModelosMensagem } from "@/lib/leads/mensagens";
+import { whatsappDoTelefone } from "@/lib/leads/brasileiro";
 import { configPais } from "@/lib/leads/paises";
 import { BOTAO_NEUTRO, BOTAO_WHATSAPP } from "@/components/ui";
 import { IconeCopiar, IconeLink, IconeMapa, IconeTelefone, IconeVisto, IconeWhatsapp } from "@/components/Icones";
@@ -10,6 +11,15 @@ import { IconeCopiar, IconeLink, IconeMapa, IconeTelefone, IconeVisto, IconeWhat
 // devolve e-mail, então o que dá para entregar é: telefone no formato
 // internacional (com botão de ligar), o Google Maps (onde o usuário acha
 // site, redes e às vezes e-mail) e a mensagem pronta no idioma do país.
+//
+// Provável negócio brasileiro (lib/leads/brasileiro.ts): a mensagem vai
+// em português e o botão de WhatsApp aparece mesmo onde ele não é o
+// costume, porque brasileiro no exterior costuma usar WhatsApp.
+
+// Idioma da mensagem pronta de um lead de fora do Brasil.
+export function idiomaMensagemLead(pais: string | null | undefined, brasileiro: boolean): IdiomaModelo {
+  return brasileiro ? "pt" : (configPais(pais).idiomaMensagem as IdiomaModelo);
+}
 
 // "+1 512-555-0100" -> "tel:+15125550100"
 function linkTelefone(telefone: string): string {
@@ -23,6 +33,7 @@ export function BotoesContatoInternacional({
   maps,
   site,
   mensagemWhatsapp,
+  brasileiro = false,
 }: {
   pais: string | null | undefined;
   telefone: string | null;
@@ -31,8 +42,15 @@ export function BotoesContatoInternacional({
   site: string | null;
   // Texto do botão de WhatsApp, nos países em que ele aparece.
   mensagemWhatsapp: string;
+  // Provável negócio brasileiro: mostra o WhatsApp mesmo assim.
+  brasileiro?: boolean;
 }) {
   const config = configPais(pais);
+  const numeroWhatsapp = config.whatsapp
+    ? whatsapp
+    : brasileiro
+      ? whatsapp || whatsappDoTelefone(telefone, config.ddi)
+      : null;
   return (
     <>
       {telefone ? (
@@ -45,8 +63,8 @@ export function BotoesContatoInternacional({
       ) : (
         <span className="text-sm text-muted">Sem telefone no Google</span>
       )}
-      {config.whatsapp && whatsapp && (
-        <a target="_blank" rel="noopener" href={linkWhatsapp(whatsapp, mensagemWhatsapp)} className={BOTAO_NEUTRO}>
+      {numeroWhatsapp && (
+        <a target="_blank" rel="noopener" href={linkWhatsapp(numeroWhatsapp, mensagemWhatsapp)} className={BOTAO_NEUTRO}>
           <IconeWhatsapp width={18} height={18} />
           WhatsApp
         </a>
@@ -97,14 +115,18 @@ export function MensagemPronta({
   pais,
   nome,
   modelosPorIdioma,
+  brasileiro = false,
 }: {
   pais: string | null | undefined;
   nome: string;
   // Modelos do usuário (Perfil), por idioma. O do país é escolhido aqui.
   modelosPorIdioma: Partial<Record<string, ModelosMensagem>>;
+  // Provável negócio brasileiro: mensagem em português.
+  brasileiro?: boolean;
 }) {
   const config = configPais(pais);
-  const modelos = modelosPorIdioma[config.idiomaMensagem];
+  const idioma = idiomaMensagemLead(pais, brasileiro);
+  const modelos = modelosPorIdioma[idioma];
   const [copiado, setCopiado] = useState<Copiavel | null>(null);
   const [erro, setErro] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -134,16 +156,25 @@ export function MensagemPronta({
 
   return (
     <div className="flex flex-col gap-2">
-      {!config.whatsapp && config.avisoContato && (
+      {brasileiro && !config.whatsapp ? (
         <p className="text-xs text-muted">
-          <span aria-hidden="true">{config.bandeira} </span>
-          {config.avisoContato}
+          <span aria-hidden="true">🇧🇷 </span>
+          Provável negócio brasileiro: vale chamar no WhatsApp, em português. Se não responder, tente o
+          telefone ou o e-mail.
         </p>
+      ) : (
+        !config.whatsapp &&
+        config.avisoContato && (
+          <p className="text-xs text-muted">
+            <span aria-hidden="true">{config.bandeira} </span>
+            {config.avisoContato}
+          </p>
+        )
       )}
       {modelos && (
         <div className="flex flex-wrap items-center gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
           <span className="w-full text-xs font-semibold text-ink-2 sm:w-auto">
-            Mensagem pronta em {NOME_IDIOMA[config.idiomaMensagem]}:
+            Mensagem pronta em {NOME_IDIOMA[idioma]}:
           </span>
           {botao("email", "Copiar e-mail")}
           {botao("assunto", "Copiar assunto")}

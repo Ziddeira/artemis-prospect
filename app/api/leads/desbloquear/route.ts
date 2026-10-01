@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { detalhesLugar, ErroGooglePlaces } from "@/lib/leads/google";
 import { montarDadosLead, paisDoLugar } from "@/lib/leads/dadosLead";
 import { dominiosDoPais } from "@/lib/leads/dominios";
+import { palavrasBrasileiras } from "@/lib/leads/listasBrasileiras";
+import { PAIS_PADRAO } from "@/lib/leads/paises";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ erro: "É preciso estar logado." }, { status: 401 });
   }
 
-  let corpo: { placeId?: string };
+  let corpo: { placeId?: string; avaliacoesPt?: unknown };
   try {
     corpo = await request.json();
   } catch {
@@ -37,6 +39,14 @@ export async function POST(request: Request) {
   if (!placeId) {
     return NextResponse.json({ erro: "place_id é obrigatório." }, { status: 400 });
   }
+  // Quantas avaliações em português a busca viu neste lead (provável
+  // negócio brasileiro, aba Internacional). Vem da tela porque o detalhe
+  // do lugar não traz avaliações. Só muda o idioma da mensagem e o botão
+  // de WhatsApp do próprio usuário: não mexe em crédito nem em nada pago.
+  const avaliacoesPt =
+    typeof corpo.avaliacoesPt === "number" && Number.isFinite(corpo.avaliacoesPt)
+      ? Math.max(0, Math.min(5, Math.floor(corpo.avaliacoesPt)))
+      : 0;
   if (!process.env.GOOGLE_PLACES_API_KEY) {
     return NextResponse.json(
       { erro: "GOOGLE_PLACES_API_KEY não configurada no servidor." },
@@ -59,7 +69,12 @@ export async function POST(request: Request) {
 
   try {
     const lugar = await detalhesLugar(placeId);
-    const dados = montarDadosLead(lugar, await dominiosDoPais(supabase, paisDoLugar(lugar)));
+    const paisLugar = paisDoLugar(lugar);
+    const dados = montarDadosLead(
+      lugar,
+      await dominiosDoPais(supabase, paisLugar),
+      paisLugar !== PAIS_PADRAO ? { palavras: await palavrasBrasileiras(supabase), avaliacoesPt } : undefined,
+    );
     // Guarda os dados em cache (até 30 dias) para "Meus leads" abrir sem
     // chamar o Google de novo. Se o cache falhar, o desbloqueio segue
     // valendo normalmente.
@@ -79,6 +94,7 @@ export async function POST(request: Request) {
         situacao: dados.situacao,
         plataforma: dados.plataforma,
         fuso: dados.fuso ?? null,
+        brasileiro: dados.brasileiro ?? null,
       },
     });
   } catch (e) {

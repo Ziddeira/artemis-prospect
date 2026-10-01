@@ -9,6 +9,7 @@ const ABAS = [
   { href: "/painel/admin/uso", rotulo: "Uso e custo" },
   { href: "/painel/admin/leads-invalidos", rotulo: "Leads inválidos" },
   { href: "/painel/admin/dominios", rotulo: "Sites de terceiros" },
+  { href: "/painel/admin/brasileiros", rotulo: "Negócio brasileiro" },
   { href: "/painel/admin/pagamentos", rotulo: "Pagamentos" },
   { href: "/painel/admin/promocoes", rotulo: "Promoções" },
   { href: "/painel/admin/erros", rotulo: "Erros" },

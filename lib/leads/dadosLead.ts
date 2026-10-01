@@ -10,6 +10,7 @@ import {
   type PlaceBruto,
   type Situacao,
 } from "./classificacao";
+import { avaliarBrasileiro, tipoBrasileiro, type SinalBrasileiro } from "./brasileiro";
 import { codigoEstado, codigoPaisDoEndereco, escolherFuso } from "./fuso";
 import { PAIS_PADRAO, configPais, ehCodigoPais, type CodigoPais } from "./paises";
 
@@ -33,6 +34,17 @@ export interface DadosLead {
   // vem sem: vale Brasil.
   pais?: CodigoPais;
   fuso?: string | null;
+  // "Provável negócio brasileiro" (lib/leads/brasileiro.ts), só fora do
+  // Brasil. Vazio = nenhum sinal (ou cache gravado antes disso).
+  brasileiro?: SinalBrasileiro | null;
+}
+
+// Para o sinal de negócio brasileiro no desbloqueio: o detalhe do lugar
+// não traz avaliações (pedir subiria o preço da chamada), então o número
+// de avaliações em português vem da busca que mostrou o lead.
+export interface OpcoesBrasileiro {
+  palavras: string[];
+  avaliacoesPt: number;
 }
 
 // País da empresa pelo endereço que o Google devolveu. País fora da
@@ -44,7 +56,11 @@ export function paisDoLugar(lugar: PlaceBruto): CodigoPais {
 
 // dominiosDoPais: lista extra de sites de terceiros do país da empresa
 // (lib/leads/dominios.ts).
-export function montarDadosLead(lugar: PlaceBruto, dominiosDoPais: string[] = []): DadosLead {
+export function montarDadosLead(
+  lugar: PlaceBruto,
+  dominiosDoPais: string[] = [],
+  brasileiro?: OpcoesBrasileiro,
+): DadosLead {
   const pais = configPais(paisDoLugar(lugar));
   const situacao = classificar(lugar.websiteUri, dominiosDoPais);
   const ehPlataforma = situacao === "booking" || situacao === "rede_social";
@@ -61,6 +77,17 @@ export function montarDadosLead(lugar: PlaceBruto, dominiosDoPais: string[] = []
     maps: lugar.googleMapsUri || null,
     pais: pais.codigo,
     fuso: escolherFuso(pais, codigoEstado(lugar.addressComponents), lugar.utcOffsetMinutes),
+    ...(pais.codigo !== PAIS_PADRAO && brasileiro
+      ? {
+          brasileiro: avaliarBrasileiro({
+            nome: lugar.displayName?.text || "",
+            avaliacoesPt: brasileiro.avaliacoesPt,
+            avaliacoesRecebidas: null,
+            tipo: tipoBrasileiro(lugar),
+            palavras: brasileiro.palavras,
+          }),
+        }
+      : {}),
   };
 }
 

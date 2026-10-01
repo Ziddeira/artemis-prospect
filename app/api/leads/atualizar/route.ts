@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { detalhesLugar, ErroGooglePlaces } from "@/lib/leads/google";
 import { cacheValido, montarDadosLead, paisDoLugar, type DadosLead } from "@/lib/leads/dadosLead";
 import { dominiosDoPais } from "@/lib/leads/dominios";
+import { palavrasBrasileiras } from "@/lib/leads/listasBrasileiras";
+import { PAIS_PADRAO } from "@/lib/leads/paises";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +80,15 @@ export async function POST(request: Request) {
 
   try {
     const lugar = await detalhesLugar(placeId);
-    const dados = montarDadosLead(lugar, await dominiosDoPais(supabase, paisDoLugar(lugar)));
+    const paisLugar = paisDoLugar(lugar);
+    // O detalhe do lugar não traz avaliações: o número de avaliações em
+    // português (negócio brasileiro) continua o do desbloqueio.
+    const avaliacoesPt = linha.dados?.brasileiro?.avaliacoesPt ?? 0;
+    const dados = montarDadosLead(
+      lugar,
+      await dominiosDoPais(supabase, paisLugar),
+      paisLugar !== PAIS_PADRAO ? { palavras: await palavrasBrasileiras(supabase), avaliacoesPt } : undefined,
+    );
     await Promise.allSettled([
       supabase.from("chamadas_google").insert({ user_id: user.id, tipo: "place_details" }),
       supabase.rpc("salvar_dados_lead", { p_place_id: placeId, p_dados: dados }),

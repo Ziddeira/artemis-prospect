@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cacheValido, type DadosLead } from "@/lib/leads/dadosLead";
 import { deLinha, type LinhaUltimaBusca, type UltimaBusca } from "@/lib/leads/ultimaBusca";
 import { lerModelosMensagem } from "@/lib/perfil/modelos";
+import { regioesBrasileiras } from "@/lib/leads/listasBrasileiras";
 import BuscaClient from "./BuscaClient";
 
 export const dynamic = "force-dynamic";
@@ -31,10 +32,14 @@ export default async function BuscarPage() {
   } = await supabase.auth.getUser();
   const { modelos } = await lerModelosMensagem(supabase, user?.id ?? "");
 
+  // Atalhos de região com grande comunidade brasileira (aba Internacional).
+  const regioes = await regioesBrasileiras(supabase);
+
   return (
     <BuscaClient
       ultimaBusca={ultimaBusca}
       modelos={modelos}
+      regioesBrasileiras={regioes}
       perfilInicial={{
         plano: perfil?.plano ?? "gratis",
         buscasRestantes: perfil?.buscas_restantes ?? 0,

@@ -25,10 +25,15 @@ function chaveApi(): string {
 // acompanha sozinho).
 export const PEDIR_AVALIACOES_NA_BUSCA = true;
 
-// utcOffsetMinutes (hora local do lead, aba Internacional) é da faixa
-// "Pro", mais barata que as que a busca e os detalhes já pedem: não muda
-// o preço de nenhuma das duas. O Google cobra pela faixa mais cara entre
-// os campos pedidos.
+// utcOffsetMinutes (hora local do lead, aba Internacional), primaryType e
+// types (negócio brasileiro) são das faixas "Essentials" e "Pro", mais
+// baratas que as que a busca e os detalhes já pedem: não mudam o preço de
+// nenhuma das duas.
+// O Google cobra pela faixa mais cara entre os campos pedidos.
+//
+// O idioma das avaliações (negócio brasileiro) vem dentro de
+// places.reviews, que a busca já pede para o selo de confiança: também
+// não muda o preço.
 
 const CAMPOS_BUSCA = [
   "places.id",
@@ -43,6 +48,8 @@ const CAMPOS_BUSCA = [
   "places.businessStatus",
   "places.regularOpeningHours",
   "places.primaryTypeDisplayName",
+  "places.primaryType",
+  "places.types",
   "places.addressComponents",
   "places.utcOffsetMinutes",
   ...(PEDIR_AVALIACOES_NA_BUSCA ? ["places.reviews"] : []),
@@ -61,6 +68,9 @@ const CAMPOS_DETALHES = [
   "googleMapsUri",
   "addressComponents",
   "utcOffsetMinutes",
+  "primaryType",
+  "primaryTypeDisplayName",
+  "types",
 ].join(",");
 
 interface RespostaBusca {

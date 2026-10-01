@@ -23,7 +23,13 @@ import {
 import EtiquetaSituacao from "@/components/leads/EtiquetaSituacao";
 import SeloConfianca from "@/components/leads/SeloConfianca";
 import HoraLocal from "@/components/leads/HoraLocal";
-import { BotoesContatoInternacional, MensagemPronta } from "@/components/leads/ContatoInternacional";
+import SeloBrasileiro from "@/components/leads/SeloBrasileiro";
+import {
+  BotoesContatoInternacional,
+  MensagemPronta,
+  idiomaMensagemLead,
+} from "@/components/leads/ContatoInternacional";
+import type { RegioesPorPais } from "@/lib/leads/listasBrasileiras";
 import Score from "@/components/marca/Score";
 import LimitePlano from "@/components/marca/LimitePlano";
 import { ListaEsqueleto } from "@/components/leads/CartaoLeadEsqueleto";
@@ -122,12 +128,16 @@ export default function BuscaClient({
   perfilInicial,
   ultimaBusca,
   modelos,
+  regioesBrasileiras,
 }: {
   perfilInicial: Perfil;
   // Última busca salva no banco (lida pelo servidor, sem chamar o Google).
   ultimaBusca: UltimaBusca | null;
   // Modelos de mensagem do Perfil (leads da aba Internacional).
   modelos: ModelosPorIdioma;
+  // Atalhos de região com grande comunidade brasileira, por país (Gestão
+  // > Negócio brasileiro).
+  regioesBrasileiras: RegioesPorPais;
 }) {
   const salvaValida = ultimaBusca?.leads ? ultimaBusca : null;
   const [nicho, setNicho] = useState(ultimaBusca?.termos.join(", ") ?? "");
@@ -163,6 +173,8 @@ export default function BuscaClient({
   const [apenasAberto, setApenasAberto] = useState(true);
   const [esconderDesbloqueados, setEsconderDesbloqueados] = useState(false);
   const [filtroConfianca, setFiltroConfianca] = useState<FiltroConfianca>("todos");
+  // Só prováveis negócios brasileiros (aba Internacional).
+  const [apenasBrasileiros, setApenasBrasileiros] = useState(false);
   const [ordenarPor, setOrdenarPor] = useState<keyof typeof ORDENS>("pontuacao");
   const [situacoesAtivas, setSituacoesAtivas] = useState<Record<Situacao, boolean>>({
     sem_site: true,
@@ -195,6 +207,9 @@ export default function BuscaClient({
     return c;
   }, [leads]);
   const temSelo = contagensConfianca.verde + contagensConfianca.amarelo + contagensConfianca.vermelho > 0;
+  const totalBrasileiros = useMemo(() => leads.filter((l) => l.brasileiro).length, [leads]);
+  // Atalhos de região do país escolhido.
+  const atalhosRegiao = ehInternacional ? (regioesBrasileiras[pais] ?? []) : [];
 
   const leadsFiltrados = useMemo(() => {
     const texto = textoEndereco.trim().toLowerCase();
@@ -206,6 +221,7 @@ export default function BuscaClient({
           l.avaliacoes >= minAvaliacoes &&
           (!apenasCelular || resultadoInternacional || l.temCelular) &&
           (!apenasAberto || l.aberto) &&
+          (!apenasBrasileiros || !resultadoInternacional || !!l.brasileiro) &&
           passaFiltroConfianca(l.confianca, filtroConfianca) &&
           (!esconderDesbloqueados || !l.contato) &&
           (!texto || l.bairro.toLowerCase().includes(texto)),
@@ -219,6 +235,7 @@ export default function BuscaClient({
     apenasCelular,
     resultadoInternacional,
     apenasAberto,
+    apenasBrasileiros,
     filtroConfianca,
     esconderDesbloqueados,
     textoEndereco,
@@ -227,6 +244,14 @@ export default function BuscaClient({
 
   // O tour destaca o botão Desbloquear do primeiro lead ainda fechado.
   const primeiroBloqueado = leadsFiltrados.find((l) => !l.contato)?.id;
+
+  // Clicar no atalho põe a região no campo; clicar de novo tira.
+  function alternarAtalho(regiao: string) {
+    const chave = regiao.toLowerCase();
+    const atuais = dividirLista(areas);
+    const jaTem = atuais.some((a) => a.toLowerCase() === chave);
+    setAreas((jaTem ? atuais.filter((a) => a.toLowerCase() !== chave) : [...atuais, regiao]).join(", "));
+  }
 
   function alternarModo(novoModo: Modo) {
     if (novoModo !== "negocios" && !podeHospedagem) return;
@@ -334,7 +359,10 @@ export default function BuscaClient({
       const res = await fetch("/api/leads/desbloquear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ placeId: lead.id }),
+        // Avaliações em português que a busca viu (o detalhe do lugar não
+        // traz avaliações): mantém o "provável negócio brasileiro" em
+        // Meus leads.
+        body: JSON.stringify({ placeId: lead.id, avaliacoesPt: lead.brasileiro?.avaliacoesPt ?? 0 }),
       });
       const dados = await res.json();
       if (!res.ok && dados.creditosRestantes === undefined) {
@@ -467,6 +495,35 @@ export default function BuscaClient({
             />
           </div>
         </div>
+
+        {atalhosRegiao.length > 0 && (
+          <div className="mt-3">
+            <p id="atalhos-regiao" className="mb-1.5 text-xs font-semibold text-ink-2">
+              <span aria-hidden="true">🇧🇷 </span>
+              Regiões com grande comunidade brasileira (toque para pôr ou tirar da busca):
+            </p>
+            <div role="group" aria-labelledby="atalhos-regiao" className="flex flex-wrap gap-1.5">
+              {atalhosRegiao.map((regiao) => {
+                const ativo = listaAreas.some((a) => a.toLowerCase() === regiao.toLowerCase());
+                return (
+                  <button
+                    key={regiao}
+                    type="button"
+                    onClick={() => alternarAtalho(regiao)}
+                    aria-pressed={ativo}
+                    className={`inline-flex min-h-9 items-center border px-3 text-sm transition ${
+                      ativo
+                        ? "border-destaque bg-primary-soft font-semibold text-destaque"
+                        : "border-line bg-surface text-ink-2 hover:text-ink"
+                    }`}
+                  >
+                    {regiao}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted">
@@ -615,6 +672,27 @@ export default function BuscaClient({
                 ))}
               </div>
             </div>
+
+            {resultadoInternacional && (
+              <div className={`${CARTAO} p-4`}>
+                <h2 className="mb-1 text-[13px] font-semibold uppercase tracking-[0.2em] text-ink">Negócio brasileiro</h2>
+                <p className="mb-1 text-xs text-muted">
+                  Estimativa pelas avaliações em português, pelo tipo do negócio e pelo nome.
+                </p>
+                <label className="flex min-h-11 cursor-pointer items-center justify-between gap-2 text-sm text-ink-2">
+                  <span className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      className={CHECKBOX}
+                      checked={apenasBrasileiros}
+                      onChange={(e) => setApenasBrasileiros(e.target.checked)}
+                    />
+                    Mostrar só prováveis negócios brasileiros
+                  </span>
+                  <span className="font-semibold text-muted">{totalBrasileiros}</span>
+                </label>
+              </div>
+            )}
 
             {temSelo && (
               <fieldset className={`${CARTAO} p-4`}>
@@ -768,7 +846,9 @@ export default function BuscaClient({
                   titulo={leads.length ? "Nenhum lead com esses filtros" : "A busca não trouxe resultados"}
                   texto={
                     leads.length
-                      ? "Baixe a nota mínima, zere as avaliações, inclua mais níveis de confiança ou ative mais categorias para ver mais leads."
+                      ? apenasBrasileiros && resultadoInternacional && !totalBrasileiros
+                        ? "Nenhum provável negócio brasileiro nesta busca. Tente uma região com grande comunidade brasileira (atalhos acima) ou um nicho como “brazilian restaurant”."
+                        : "Baixe a nota mínima, zere as avaliações, inclua mais níveis de confiança ou ative mais categorias para ver mais leads."
                       : resultadoInternacional
                         ? "Confira se o nicho está em inglês (ex.: barber shop) e tente uma cidade maior ou o estado."
                         : "Tente um nicho mais comum ou uma região maior (o nome da cidade, por exemplo)."
@@ -802,12 +882,14 @@ function LeadCard({
   // Lead de fora do Brasil: telefone internacional, Maps e mensagem no
   // idioma do país, no lugar do WhatsApp.
   const internacional = !!lead.pais && lead.pais !== "BR";
-  const idioma = configPais(lead.pais).idiomaMensagem;
-  const msgCurta =
-    idioma === "pt" ? montarMensagem(modeloMsg, lead.nome, plataforma) : preencherModelo(modelos[idioma].curta, lead.nome);
+  // Provável negócio brasileiro lá fora: mensagem em português e WhatsApp.
+  const brasileiro = internacional && !!lead.brasileiro;
+  const msgCurta = internacional
+    ? preencherModelo(modelos[idiomaMensagemLead(lead.pais, brasileiro)].curta, lead.nome)
+    : montarMensagem(modeloMsg, lead.nome, plataforma);
 
   return (
-    <article className={`${CARTAO} flex flex-col gap-4 p-4 sm:p-5`}>
+    <article className={`${CARTAO} flex flex-col gap-4 p-4 sm:p-5 ${brasileiro ? "border-l-4 border-l-destaque" : ""}`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
           <Score pontos={lead.pontuacao} title={`Pontuação de lead: ${lead.pontuacao} de 100`} />
@@ -831,8 +913,9 @@ function LeadCard({
               )}
               {!lead.aberto && !lead.confianca && <span className="font-semibold text-danger">Fechado</span>}
             </div>
-            {(lead.confianca || lead.fuso) && (
+            {(lead.confianca || lead.fuso || (internacional && lead.brasileiro)) && (
               <div className="mt-2 flex flex-wrap gap-2">
+                {internacional && lead.brasileiro && <SeloBrasileiro sinal={lead.brasileiro} />}
                 {lead.confianca && <SeloConfianca confianca={lead.confianca} />}
                 {lead.fuso && <HoraLocal fuso={lead.fuso} />}
               </div>
@@ -849,6 +932,7 @@ function LeadCard({
               maps={lead.contato.maps}
               site={lead.contato.site}
               mensagemWhatsapp={msgCurta}
+              brasileiro={brasileiro}
             />
           ) : lead.contato ? (
             <>
@@ -899,7 +983,7 @@ function LeadCard({
 
       {lead.contato && internacional && (
         <div className="border-t border-line pt-3">
-          <MensagemPronta pais={lead.pais} nome={lead.nome} modelosPorIdioma={modelos} />
+          <MensagemPronta pais={lead.pais} nome={lead.nome} modelosPorIdioma={modelos} brasileiro={brasileiro} />
         </div>
       )}
     </article>

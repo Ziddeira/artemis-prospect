@@ -6,7 +6,7 @@ import { LIMITES_MODELO, ehIdiomaModelo, type ModelosMensagem } from "@/lib/lead
 export const dynamic = "force-dynamic";
 
 const MSG_FALTA_ETAPA21 =
-  "Os modelos em inglês ainda não foram ativados no banco. Rode os scripts supabase/etapa21-1 e etapa21-2 no Supabase.";
+  "Os modelos de mensagem ainda não foram ativados no banco. Rode os scripts supabase/etapa21-1 e etapa21-2 no Supabase.";
 
 // Salva os modelos de mensagem de um idioma (aba Internacional) do
 // usuário logado. { idioma, modelos: null } volta aos modelos padrão.

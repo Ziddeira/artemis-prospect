@@ -28,8 +28,12 @@ export interface ConfigPais {
   conectorBusca: string;
   // Idioma dos modelos de mensagem usados para leads deste país.
   idiomaMensagem: "pt" | "en";
+  // Código de discagem do país ("1" nos EUA e no Canadá), para montar o
+  // WhatsApp de prováveis negócios brasileiros (lib/leads/brasileiro.ts).
+  ddi: string;
   // WhatsApp é o jeito usual de chamar empresa por lá? Se não, o botão
-  // some e aparece avisoContato.
+  // some e aparece avisoContato (menos nos prováveis negócios
+  // brasileiros: brasileiro no exterior costuma usar WhatsApp).
   whatsapp: boolean;
   avisoContato: string | null;
   // Exemplos que aparecem nos campos da busca.
@@ -47,6 +51,10 @@ export interface ConfigPais {
   // vale é a do banco, editável em Gestão > Sites de terceiros. Esta só
   // é usada se o SQL da etapa 21 ainda não foi rodado.
   dominiosTerceiroPadrao: string[];
+  // Atalhos de região com grande comunidade brasileira (aba
+  // Internacional). Também é só o ponto de partida: a lista que vale é a
+  // do banco, editável em Gestão > Negócio brasileiro (etapa 22).
+  regioesBrasileirasPadrao: string[];
 }
 
 // Os mesmos para EUA e Canadá (e o que o supabase/etapa21 grava no banco).
@@ -79,6 +87,7 @@ export const PAISES: Record<CodigoPais, ConfigPais> = {
     languageCode: "pt-BR",
     conectorBusca: "em",
     idiomaMensagem: "pt",
+    ddi: "55",
     whatsapp: true,
     avisoContato: null,
     exemploNicho: "barbearia, salão de beleza",
@@ -87,6 +96,7 @@ export const PAISES: Record<CodigoPais, ConfigPais> = {
     fusoPorEstado: {},
     fusos: [],
     dominiosTerceiroPadrao: [],
+    regioesBrasileirasPadrao: [],
   },
   US: {
     codigo: "US",
@@ -97,6 +107,7 @@ export const PAISES: Record<CodigoPais, ConfigPais> = {
     languageCode: "en-US",
     conectorBusca: "in",
     idiomaMensagem: "en",
+    ddi: "1",
     whatsapp: false,
     avisoContato: AVISO_SEM_WHATSAPP,
     exemploNicho: "barber shop, hair salon, dentist",
@@ -131,6 +142,22 @@ export const PAISES: Record<CodigoPais, ConfigPais> = {
       "America/Puerto_Rico",
     ],
     dominiosTerceiroPadrao: DOMINIOS_AMERICA_DO_NORTE,
+    regioesBrasileirasPadrao: [
+      "Pompano Beach FL",
+      "Deerfield Beach FL",
+      "Boca Raton FL",
+      "Fort Lauderdale FL",
+      "Orlando FL",
+      "Kissimmee FL",
+      "Framingham MA",
+      "Marlborough MA",
+      "Everett MA",
+      "Newark NJ",
+      "Long Branch NJ",
+      "Danbury CT",
+      "Astoria NY",
+      "Marietta GA",
+    ],
   },
   CA: {
     codigo: "CA",
@@ -141,6 +168,7 @@ export const PAISES: Record<CodigoPais, ConfigPais> = {
     languageCode: "en-CA",
     conectorBusca: "in",
     idiomaMensagem: "en",
+    ddi: "1",
     whatsapp: false,
     avisoContato: AVISO_SEM_WHATSAPP,
     exemploNicho: "barber shop, hair salon, dentist",
@@ -171,6 +199,14 @@ export const PAISES: Record<CodigoPais, ConfigPais> = {
       "America/Whitehorse",
     ],
     dominiosTerceiroPadrao: DOMINIOS_AMERICA_DO_NORTE,
+    regioesBrasileirasPadrao: [
+      "Toronto ON",
+      "Mississauga ON",
+      "Brampton ON",
+      "Vancouver BC",
+      "Montreal QC",
+      "Calgary AB",
+    ],
   },
 };
 

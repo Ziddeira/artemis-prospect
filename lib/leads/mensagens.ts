@@ -25,11 +25,16 @@ export function linkWhatsapp(celular: string, texto: string): string {
 // seus no Perfil; ficam em profiles.modelos_mensagem (etapa 21), um
 // grupo por idioma. Sem edição, valem os padrões abaixo.
 // {nome} vira o nome da empresa.
+//
+// "pt" é o de prováveis negócios brasileiros no exterior
+// (lib/leads/brasileiro.ts): a mensagem vai em português, e a curta
+// também é a do botão de WhatsApp. Não é o modelo dos leads do Brasil,
+// que continua o de cima.
 
-export type IdiomaModelo = "en";
+export type IdiomaModelo = "en" | "pt";
 
-export const NOME_IDIOMA: Record<"pt" | IdiomaModelo, string> = { pt: "português", en: "inglês" };
-export const IDIOMAS_MODELO: IdiomaModelo[] = ["en"];
+export const NOME_IDIOMA: Record<IdiomaModelo, string> = { pt: "português", en: "inglês" };
+export const IDIOMAS_MODELO: IdiomaModelo[] = ["en", "pt"];
 
 export interface ModelosMensagem {
   // E-mail: assunto e texto.
@@ -48,6 +53,13 @@ export const MODELOS_PADRAO: Record<IdiomaModelo, ModelosMensagem> = {
       "Hi {nome} team,\n\nI found {nome} on Google Maps and noticed you don't have a website of your own yet. I'm a web designer and I build fast, mobile-friendly websites for local businesses, so new customers can find you on Google, see your services and get in touch directly.\n\nWould you like to see a free mockup of what your website could look like? No commitment.\n\nBest regards,",
     curta:
       "Hi! I found {nome} on Google Maps and noticed you don't have a website of your own yet. I'm a web designer who builds simple, mobile-friendly websites for local businesses. Would you like to see a free mockup of yours? No commitment.",
+  },
+  pt: {
+    emailAssunto: "Uma ideia de site para a {nome}",
+    emailCorpo:
+      "Olá, pessoal da {nome}, tudo bem?\n\nEncontrei vocês no Google Maps e vi que ainda não têm um site próprio. Trabalho com criação de sites e atendo negócios de brasileiros aí fora: sites rápidos, que funcionam bem no celular, para os clientes acharem vocês no Google, verem os serviços e chamarem direto.\n\nQuer ver uma prévia grátis de como ficaria o site de vocês? Sem compromisso.\n\nUm abraço,",
+    curta:
+      "Oi, tudo bem? Vi a {nome} no Google Maps e notei que vocês ainda não têm um site próprio. Trabalho com criação de sites para negócios de brasileiros aí fora. Posso te mostrar uma prévia grátis de como ficaria? Sem compromisso.",
   },
 };
 

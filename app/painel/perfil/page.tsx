@@ -67,6 +67,7 @@ export default async function PerfilPage({
       mostrarVendas={mostrarVendas}
       acesso={acesso}
       modelosIngles={modelos.en}
+      modelosPortugues={modelos.pt}
       modelosAtivos={modelosAtivos}
     />
   );

@@ -1,4 +1,5 @@
 // Classificação e pontuação de leads, portadas de caca-leads-sem-site.html.
+import type { SinalBrasileiro } from "./brasileiro";
 import type { Confianca } from "./confianca";
 import type { CodigoPais, ConfigPais } from "./paises";
 
@@ -31,10 +32,19 @@ export interface PlaceBruto {
   businessStatus?: string;
   regularOpeningHours?: unknown;
   primaryTypeDisplayName?: { text?: string };
+  // Tipos da Places API (ex.: "brazilian_restaurant"), para o sinal de
+  // negócio brasileiro (lib/leads/brasileiro.ts).
+  primaryType?: string;
+  types?: string[];
   addressComponents?: AddressComponent[];
-  // Só a data é usada (selo de confiança); o texto das avaliações nunca
-  // é mostrado nem guardado.
-  reviews?: { publishTime?: string }[];
+  // Só a data (selo de confiança) e o idioma original (negócio
+  // brasileiro) são usados; o texto das avaliações nunca é mostrado nem
+  // guardado.
+  reviews?: {
+    publishTime?: string;
+    text?: { languageCode?: string };
+    originalText?: { languageCode?: string };
+  }[];
   // Diferença do horário da empresa para o UTC agora (lib/leads/fuso.ts).
   utcOffsetMinutes?: number;
 }
@@ -64,6 +74,9 @@ export interface LeadResultado {
   // Selo de confiança (lib/leads/confianca.ts). Buscas salvas antes do
   // selo existir vêm sem ele.
   confianca?: Confianca;
+  // "Provável negócio brasileiro" (lib/leads/brasileiro.ts). Só na aba
+  // Internacional; nulo/vazio = nenhum sinal.
+  brasileiro?: SinalBrasileiro | null;
   // Já desbloqueado antes, mas sem o contato à mão (cache vencido):
   // desbloquear de novo não cobra.
   desbloqueado?: boolean;

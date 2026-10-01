@@ -219,6 +219,38 @@ cada um no SQL Editor do Supabase:
     acrescentar outro, basta uma entrada nova ali (o banco não precisa de
     script novo). Sem este script, Negócios e Hospedagem funcionam como
     antes e a aba Internacional avisa que falta rodá-lo.
+22. `supabase/etapa22-negocios-brasileiros.sql` — negócios brasileiros
+    no exterior (aba Internacional). Cria as tabelas
+    `palavras_brasileiras` (palavras do nome que contam como sinal) e
+    `regioes_brasileiras` (atalhos de região com grande comunidade
+    brasileira, por país), editáveis em Gestão > Negócio brasileiro. Sem
+    este script, o selo, o filtro e os atalhos já funcionam com as listas
+    iniciais do código; só a edição pela Gestão fica desligada.
+
+### Provável negócio brasileiro (aba Internacional)
+
+Cada lead da aba Internacional pode ganhar o selo "Provável negócio
+brasileiro", com a força do sinal e o motivo em uma frase
+(`lib/leads/brasileiro.ts`). Pesos: avaliação escrita em português = 3
+pontos (+1 por avaliação a mais, até 3), tipo do negócio brasileiro no
+Google (`brazilian_restaurant`, `acai_shop`) = 2, palavra da lista no
+nome = 1. É sempre "provável": a tela nunca afirma.
+
+- O idioma das avaliações vem em `reviews[].originalText.languageCode`,
+  dentro do campo `places.reviews` que a busca já pedia para o selo de
+  confiança. `places.types` e `places.primaryType` são de faixas mais
+  baratas que a da busca. Resultado: nenhum campo novo caro e **o preço
+  por chamada não muda**. Se `PEDIR_AVALIACOES_NA_BUSCA` (em
+  `lib/leads/google.ts`) for desligado, o sinal das avaliações some (o
+  tipo e o nome continuam).
+- No desbloqueio, o detalhe do lugar não traz avaliações (pedir subiria o
+  preço). Por isso a tela manda junto quantas avaliações em português a
+  busca viu, para "Meus leads" manter o selo.
+- Nesses leads, a mensagem pronta vai em português (editável no Perfil,
+  "Mensagens para brasileiros no exterior") e o botão de WhatsApp
+  aparece, com o número internacional da empresa.
+- Filtro "Mostrar só prováveis negócios brasileiros" na busca e atalhos
+  de região embaixo do campo de região.
 
 ### Rotinas agendadas (Vercel Cron)
 

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   } catch {
     return erro("Corpo da requisição inválido.");
   }
-  if (!ehPlanoPago(corpo.plano)) return erro("Escolha o plano Solo ou Pro.");
+  if (!ehPlanoPago(corpo.plano)) return erro("Escolha o plano Solo, Pro ou Platina.");
   const plano = PLANOS[corpo.plano];
 
   const assinatura = await assinaturaViva(ctx);

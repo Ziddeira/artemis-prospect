@@ -30,6 +30,12 @@ e, se for rodar localmente, copie `.env.example` para `.env.local`:
 - `ASAAS_ENV` — `sandbox` (testes) ou `producao`.
 - `ASAAS_WEBHOOK_TOKEN` — segredo que você inventa e cadastra igual no
   webhook do Asaas; a rota recusa (401) qualquer evento sem ele.
+- `ANTHROPIC_API_KEY` — chave server-only da API da Anthropic (Claude),
+  usada só pela geração de site com IA do plano Platina (etapa 23).
+  Nunca é exposta ao navegador. Gere em console.anthropic.com > API Keys.
+- `SITES_IA_MODELO` (opcional) — modelo da geração de sites. Padrão
+  `claude-opus-5-5`. Para gastar cerca de metade, use `claude-sonnet-5-5`.
+- `SITES_IA_ESFORCO` (opcional) — `low`, `medium` (padrão) ou `high`.
 - `CRON_SECRET` — segredo das rotinas agendadas (verificação semanal
   das vendas, virada do mês e notificações do sino). Texto aleatório de 32+ caracteres; a
   Vercel envia sozinho nas execuções agendadas.
@@ -226,6 +232,63 @@ cada um no SQL Editor do Supabase:
     brasileira, por país), editáveis em Gestão > Negócio brasileiro. Sem
     este script, o selo, o filtro e os atalhos já funcionam com as listas
     iniciais do código; só a edição pela Gestão fica desligada.
+
+23. Etapa 23, em **três partes, nesta ordem**:
+    `supabase/etapa23-1-platina-plano.sql`,
+    `supabase/etapa23-2-platina-pagamentos.sql` e
+    `supabase/etapa23-3-sites-ia.sql` — plano Platina (R$ 89,90/mês: tudo
+    do Pro + 5 gerações de site com IA por mês), pacote avulso de +3
+    gerações (R$ 39,90, só para quem está no Platina; não vence) e a
+    geração de site. Cria as colunas `profiles.sites_restantes` e
+    `profiles.sites_extras`, as tabelas `sites_gerados` (o site e o
+    formulário confirmado) e `sites_geracoes` (uma linha por chamada à IA:
+    usuário, data, modelo, tokens e custo estimado) e atualiza a função do
+    webhook do Asaas (`processar_evento_asaas`) para o Platina e o pacote.
+    Todas as regras ficam no banco: plano Platina válido, só lead que a
+    pessoa desbloqueou, 1 geração por vez, 2 gerações por hora (e no máximo
+    6 chamadas à IA por hora, contando ajustes), 2 ajustes grátis por site
+    (o 3º conta como geração nova e devolve os 2 ajustes grátis) e saldo
+    devolvido se a IA falhar. Os cupons continuam valendo só para Solo e
+    Pro. Veja "Geração de site com IA" abaixo.
+
+### Geração de site com IA (plano Platina)
+
+Em "Meus leads", cada lead tem o botão "Gerar site". Um formulário curto
+confirma nome, ramo, cidade, serviços, WhatsApp, idioma e estilo visual
+(Moderno, Elegante, Acolhedor ou Impacto). O servidor chama a IA
+(`lib/sites/ia.ts`) e guarda uma landing page de uma página só, em HTML,
+CSS e JS num arquivo, com topo, serviços, sobre, depoimentos,
+localização e contato por WhatsApp. Em "Meus sites" a pessoa vê a
+prévia, baixa o `.html` ou o `.zip` (com LEIA-ME e a pasta `fotos/`) e
+pede ajustes.
+
+- **Fotos:** o site nunca leva fotos do Google (nem de lugar nenhum). A IA
+  é instruída a usar espaços reservados marcados, e o servidor confere de
+  novo (`lib/sites/html.ts`): qualquer imagem de fora vira espaço
+  reservado, e mapas incorporados e scripts de fora saem.
+- **Depoimentos:** saem como "Depoimento de exemplo", para trocar pelos
+  reais antes de publicar. A IA não inventa números, prêmios nem preços.
+- **Hospedagem:** o Ártemis não hospeda o site; as telas dizem isso.
+  O HTML fica guardado 30 dias depois da última versão (leva nome,
+  telefone e endereço vindos do Google) e a rotina diária do sino apaga
+  os vencidos. O registro de custo fica.
+- **Chave da IA:** `ANTHROPIC_API_KEY` só no servidor. O saldo e os
+  limites são conferidos pelas funções SQL `reservar_geracao_site` e
+  `reservar_ajuste_site`; só o servidor (service_role) grava o
+  resultado e o custo (`concluir_geracao_site` / `falhar_geracao_site`).
+- **Tempo:** a IA leva de 1 a 3 minutos. As rotas `/api/sites/gerar` e
+  `/api/sites/[id]/ajustar` pedem até 300 s à Vercel (`maxDuration`).
+  Se a função for cortada no meio, a reserva é liberada sozinha depois
+  de 15 minutos e o saldo volta.
+- **Custo:** Gestão > Sites IA mostra o custo do mês, a média por
+  geração e por ajuste, o custo por dia, por modelo, quem mais gasta e as
+  últimas 30 chamadas. Os preços por modelo ficam em
+  `lib/sites/custos.ts`. Para conferir direto no banco:
+
+  ```sql
+  select criado_em, tipo, status, modelo, tokens_entrada, tokens_saida, custo_usd
+  from sites_geracoes order by criado_em desc limit 50;
+  ```
 
 ### Provável negócio brasileiro (aba Internacional)
 

@@ -22,7 +22,7 @@ export interface ChamadoAdmin {
 }
 
 const FUSO = "America/Sao_Paulo";
-const NOME_PLANO: Record<string, string> = { gratis: "Grátis", solo: "Solo", pro: "Pro" };
+const NOME_PLANO: Record<string, string> = { gratis: "Grátis", solo: "Solo", pro: "Pro", platina: "Platina" };
 
 function dataHora(iso: string) {
   return new Date(iso).toLocaleString("pt-BR", { timeZone: FUSO, dateStyle: "short", timeStyle: "short" });

@@ -30,7 +30,7 @@ export interface RegistroAuditoria {
 }
 
 const FUSO = "America/Sao_Paulo";
-const NOME_PLANO: Record<string, string> = { gratis: "Grátis", solo: "Solo", pro: "Pro" };
+const NOME_PLANO: Record<string, string> = { gratis: "Grátis", solo: "Solo", pro: "Pro", platina: "Platina" };
 const NOME_ACAO: Record<string, string> = {
   ajuste_conta: "Ajuste de conta",
   venda_aprovada: "Venda aprovada",
@@ -196,6 +196,7 @@ function FormAjuste({ conta: c, onFechar }: { conta: Conta; onFechar: () => void
             <option value="gratis">Grátis</option>
             <option value="solo">Solo</option>
             <option value="pro">Pro</option>
+            <option value="platina">Platina</option>
           </select>
         </div>
         <div>

@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   PACOTE_EXTRA,
+  PACOTE_SITES,
   PLANOS,
+  PLANOS_COM_CUPOM,
   formatarPreco,
   type FormaPagamento,
   type PlanoId,
@@ -33,6 +35,9 @@ interface Perfil {
   creditosDesbloqueio: number;
   creditosPremio: number;
   buscasRestantes: number;
+  // Gerações de site com IA (Platina, etapa 23): do mês e do pacote.
+  sitesRestantes: number;
+  sitesExtras: number;
   validoAte: string | null;
   temClienteAsaas: boolean;
 }
@@ -64,7 +69,7 @@ interface CupomConferido {
   duracaoMeses: number | null;
 }
 
-type Checkout = { tipo: "assinar"; plano: PlanoPago } | { tipo: "pacote" };
+type Checkout = { tipo: "assinar"; plano: PlanoPago } | { tipo: "pacote" } | { tipo: "pacote_sites" };
 
 function formatarData(iso: string | null) {
   if (!iso) return null;
@@ -197,7 +202,10 @@ export default function PlanoClient({
             ...(cupomValido ? { cupom: cupomValido.codigo } : {}),
             ...dadosCliente,
           })
-        : await enviar("/api/plano/pacote", { forma, ...dadosCliente });
+        : await enviar(checkout.tipo === "pacote_sites" ? "/api/plano/pacote-sites" : "/api/plano/pacote", {
+            forma,
+            ...dadosCliente,
+          });
     if (!dados) return;
     setCheckout(null);
     setCupom(null);
@@ -206,7 +214,9 @@ export default function PlanoClient({
     setMensagem(
       checkout.tipo === "assinar"
         ? "Assinatura criada! Pague a fatura para ativar o plano. Assim que o Asaas confirmar o pagamento, seu plano e seus créditos são atualizados automaticamente."
-        : "Pedido do pacote criado! Os créditos extras entram assim que o Asaas confirmar o pagamento.",
+        : checkout.tipo === "pacote_sites"
+          ? `Pedido do pacote de sites criado! As +${PACOTE_SITES.sites} gerações entram assim que o Asaas confirmar o pagamento.`
+          : "Pedido do pacote criado! Os créditos extras entram assim que o Asaas confirmar o pagamento.",
     );
   }
 
@@ -267,6 +277,17 @@ export default function PlanoClient({
               <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted">Buscas</p>
               <p className="mt-1 font-display text-2xl font-bold tabular-nums text-ink">{perfil.buscasRestantes}</p>
             </div>
+            {(perfil.plano === "platina" || perfil.sitesExtras > 0) && (
+              <div>
+                <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted">Sites</p>
+                <p className="mt-1 font-display text-2xl font-bold tabular-nums text-ink">
+                  {perfil.sitesRestantes + perfil.sitesExtras}
+                </p>
+                {perfil.sitesExtras > 0 && (
+                  <p className="mt-0.5 text-xs text-muted">inclui {perfil.sitesExtras} do pacote (não vencem)</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -331,7 +352,7 @@ export default function PlanoClient({
 
       {/* Planos -------------------------------------------------------- */}
       <h2 className="mt-10 text-2xl font-bold text-ink">Planos</h2>
-      <div className="mt-3 grid gap-4 md:grid-cols-3">
+      <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {(Object.keys(PLANOS) as PlanoId[]).map((id) => {
           const p = PLANOS[id];
           const atual = perfil.plano === id;
@@ -347,6 +368,7 @@ export default function PlanoClient({
                 <li>{p.buscas} buscas{p.preco > 0 ? " por mês" : ""}</li>
                 <li>{p.hospedagem ? "Modo Hospedagem incluso" : "Sem modo Hospedagem"}</li>
                 {p.internacional && <li>Aba Internacional ({nomesPaisesInternacionais()})</li>}
+                {p.sites > 0 && <li>{p.sites} gerações de site com IA por mês</li>}
               </ul>
               <div className="mt-4">
                 {id === "gratis" ? (
@@ -396,6 +418,25 @@ export default function PlanoClient({
         </button>
       </section>
 
+      {/* Pacote de sites (Platina) ------------------------------------- */}
+      <section className={`${CARTAO} mt-4 flex flex-wrap items-center justify-between gap-4`}>
+        <div className="min-w-0 flex-1 basis-80">
+          <p className="font-display text-lg font-bold uppercase tracking-[0.08em] text-ink">Pacote de sites</p>
+          <p className="mt-1 text-sm text-ink-2">
+            +{PACOTE_SITES.sites} gerações de site com IA por{" "}
+            <strong className="text-ink">{formatarPreco(PACOTE_SITES.preco)}</strong>. Compra avulsa, só para quem está
+            no Platina. As gerações do pacote não vencem e são usadas depois das {PLANOS.platina.sites} do mês.
+          </p>
+        </div>
+        <button
+          onClick={() => abrirCheckout({ tipo: "pacote_sites" })}
+          disabled={carregando || perfil.plano !== "platina"}
+          className={BOTAO_SECUNDARIO}
+        >
+          {perfil.plano === "platina" ? "Comprar pacote de sites" : "Só no Platina"}
+        </button>
+      </section>
+
       {/* Checkout -------------------------------------------------------- */}
       {checkout && (
         <form ref={formRef} onSubmit={confirmarCheckout} className={`${CARTAO} mt-4`}>
@@ -404,10 +445,16 @@ export default function PlanoClient({
               ? `Assinar o plano ${PLANOS[checkout.plano].nome} — ${formatarPreco(
                   cupomValido ? cupomValido.valorFinal : PLANOS[checkout.plano].preco,
                 )}/mês`
-              : `Pacote extra — ${formatarPreco(PACOTE_EXTRA.preco)}`}
+              : checkout.tipo === "pacote_sites"
+                ? `Pacote de sites — ${formatarPreco(PACOTE_SITES.preco)}`
+                : `Pacote extra — ${formatarPreco(PACOTE_EXTRA.preco)}`}
           </h2>
 
-          {checkout.tipo === "assinar" && (
+          {checkout.tipo === "assinar" && !PLANOS_COM_CUPOM.includes(checkout.plano) && (
+            <p className="mt-3 text-sm text-ink-2">Os cupons de desconto valem só para os planos Solo e Pro.</p>
+          )}
+
+          {checkout.tipo === "assinar" && PLANOS_COM_CUPOM.includes(checkout.plano) && (
             <div className="mt-3">
               <label htmlFor="cupom" className={ROTULO}>
                 Cupom de desconto (opcional)

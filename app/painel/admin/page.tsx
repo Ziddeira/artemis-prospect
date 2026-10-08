@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 interface VisaoGeral {
   contas_total: number;
   contas_gratis: number;
-  assinantes_por_plano: { solo: number; pro: number };
+  assinantes_por_plano: { solo: number; pro: number; platina?: number };
   novos_cadastros_mes: number;
   assinaturas_ativas: number;
   assinaturas_inadimplentes: number;
@@ -31,7 +31,7 @@ export default async function VisaoGeralPage() {
   const { data, error } = await supabase.rpc("admin_visao_geral");
   if (error) return <FalhaCarregar error={error} />;
   const v = data as VisaoGeral;
-  const pagantes = v.assinantes_por_plano.solo + v.assinantes_por_plano.pro;
+  const pagantes = v.assinantes_por_plano.solo + v.assinantes_por_plano.pro + (v.assinantes_por_plano.platina ?? 0);
 
   return (
     <div>
@@ -39,6 +39,7 @@ export default async function VisaoGeralPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Numero rotulo="Solo" valor={inteiro(v.assinantes_por_plano.solo)} />
           <Numero rotulo="Pro" valor={inteiro(v.assinantes_por_plano.pro)} />
+          <Numero rotulo="Platina" valor={inteiro(v.assinantes_por_plano.platina ?? 0)} />
           <Numero rotulo="Total pagante" valor={inteiro(pagantes)} />
           <Numero rotulo="Grátis" valor={inteiro(v.contas_gratis)} dica={`de ${inteiro(v.contas_total)} contas`} />
         </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { ehPlanoPago } from "@/lib/planos";
+import { PLANOS, PLANOS_COM_CUPOM, ehPlanoPago } from "@/lib/planos";
 import { faltaEtapa19 } from "@/lib/pagamentos/cupons";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +22,9 @@ export async function POST(request: Request) {
   const codigo = typeof corpo?.codigo === "string" ? corpo.codigo.trim().slice(0, 40) : "";
   if (!codigo) return NextResponse.json({ erro: "Digite o código do cupom." }, { status: 400 });
   if (!ehPlanoPago(corpo?.plano)) return NextResponse.json({ erro: "Escolha o plano Solo ou Pro." }, { status: 400 });
+  if (!PLANOS_COM_CUPOM.includes(corpo.plano)) {
+    return NextResponse.json({ erro: `Os cupons ainda não valem para o plano ${PLANOS[corpo.plano as keyof typeof PLANOS].nome}.` }, { status: 400 });
+  }
 
   const { data, error } = await supabase
     .rpc("conferir_cupom", { p_codigo: codigo, p_plano: corpo.plano })

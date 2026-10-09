@@ -27,6 +27,7 @@ import {
   TituloPagina,
 } from "@/components/ui";
 import { textoDuracao } from "@/lib/cupons";
+import { AVISO_LIBERACAO_24H } from "@/lib/sites/dados";
 
 const CARTAO = `${CARTAO_BASE} p-5 sm:p-6`;
 
@@ -90,7 +91,9 @@ export default function PlanoClient({
   perfil,
   assinatura,
   desconto,
+  geracaoSitesAtiva = true,
 }: {
+  geracaoSitesAtiva?: boolean;
   perfil: Perfil;
   assinatura: Assinatura | null;
   desconto: Desconto | null;
@@ -369,6 +372,11 @@ export default function PlanoClient({
                 <li>{p.hospedagem ? "Modo Hospedagem incluso" : "Sem modo Hospedagem"}</li>
                 {p.internacional && <li>Aba Internacional ({nomesPaisesInternacionais()})</li>}
                 {p.sites > 0 && <li>{p.sites} gerações de site com IA por mês</li>}
+                {p.sites > 0 && !geracaoSitesAtiva && (
+                  <li className="mt-1 border-l-2 border-destaque pl-2 text-destaque">
+                    {AVISO_LIBERACAO_24H} Desbloqueios, buscas e tudo do Pro valem na hora.
+                  </li>
+                )}
               </ul>
               <div className="mt-4">
                 {id === "gratis" ? (

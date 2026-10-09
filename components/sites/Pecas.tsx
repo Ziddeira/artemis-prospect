@@ -1,8 +1,18 @@
 import Link from "next/link";
 import { ALERTA_AVISO, BOTAO, CARTAO } from "@/components/ui";
+import { MSG_LIBERACAO_SITES } from "@/lib/sites/dados";
 import { PACOTE_SITES, PLANOS, formatarPreco } from "@/lib/planos";
 
 // Peças repetidas nas telas de sites gerados com IA (etapa 23).
+
+// Interruptor desligado (etapa 24): aviso calmo, não é erro.
+export function AvisoLiberacao({ className = "" }: { className?: string }) {
+  return (
+    <div role="status" className={`${ALERTA_AVISO} ${className}`}>
+      <strong>Liberação em andamento.</strong> {MSG_LIBERACAO_SITES}
+    </div>
+  );
+}
 
 // Aviso fixo: o Ártemis não hospeda o site.
 export function AvisoHospedagem({ className = "" }: { className?: string }) {

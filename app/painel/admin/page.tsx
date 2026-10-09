@@ -1,5 +1,7 @@
 import { exigirAdminPagina } from "@/lib/admin/acesso";
+import Link from "next/link";
 import { formatarPreco } from "@/lib/planos";
+import { ALERTA_AVISO } from "@/components/ui";
 import { FalhaCarregar, Numero, Secao, inteiro } from "./comum";
 
 export const dynamic = "force-dynamic";
@@ -28,13 +30,34 @@ function porcento(parte: number, total: number) {
 // admin_visao_geral (etapa 11), que recusa quem não é administrador.
 export default async function VisaoGeralPage() {
   const supabase = await exigirAdminPagina();
-  const { data, error } = await supabase.rpc("admin_visao_geral");
+  const [{ data, error }, espera] = await Promise.all([
+    supabase.rpc("admin_visao_geral"),
+    supabase.rpc("admin_platina_aguardando"),
+  ]);
   if (error) return <FalhaCarregar error={error} />;
+  // Etapa 24: assinantes Platina esperando a geração de sites ser ligada.
+  const aguardando =
+    !espera.error && espera.data && !(espera.data as { ativa: boolean }).ativa
+      ? ((espera.data as { assinantes: unknown[] }).assinantes ?? []).length
+      : 0;
   const v = data as VisaoGeral;
   const pagantes = v.assinantes_por_plano.solo + v.assinantes_por_plano.pro + (v.assinantes_por_plano.platina ?? 0);
 
   return (
     <div>
+      {aguardando > 0 && (
+        <div role="status" className={`${ALERTA_AVISO} mb-6`}>
+          <strong>
+            {aguardando === 1
+              ? "1 assinante Platina está esperando a geração de sites."
+              : `${inteiro(aguardando)} assinantes Platina estão esperando a geração de sites.`}
+          </strong>{" "}
+          Ela está desligada e foi prometida em até 24 horas após a assinatura.{" "}
+          <Link href="/painel/admin/sites" className="font-semibold underline">
+            Ligar em Sites IA
+          </Link>
+        </div>
+      )}
       <Secao titulo="Assinantes ativos" descricao="Contas com plano pago ainda válido.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Numero rotulo="Solo" valor={inteiro(v.assinantes_por_plano.solo)} />

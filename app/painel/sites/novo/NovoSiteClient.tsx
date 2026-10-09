@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ALERTA_ERRO, BOTAO, CAMPO, CARTAO, ROTULO } from "@/components/ui";
+import { ALERTA_AVISO, ALERTA_ERRO, BOTAO, CAMPO, CARTAO, ROTULO } from "@/components/ui";
 import { ESTILOS, IDIOMAS, MAX_SERVICOS, type EstiloSite, type IdiomaSite } from "@/lib/sites/dados";
 
 interface Inicial {
@@ -19,11 +19,15 @@ export default function NovoSiteClient({
   inicial,
   semSaldo,
   gerando: gerandoInicial,
+  emLiberacao: emLiberacaoInicial = false,
 }: {
   placeId: string;
   inicial: Inicial;
   semSaldo: boolean;
   gerando: boolean;
+  // Interruptor desligado (etapa 24): o formulário aparece, mas o botão
+  // espera a liberação.
+  emLiberacao?: boolean;
 }) {
   const router = useRouter();
   const [nome, setNome] = useState(inicial.nome);
@@ -37,10 +41,13 @@ export default function NovoSiteClient({
   const [observacoes, setObservacoes] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [emLiberacao, setEmLiberacao] = useState(emLiberacaoInicial);
 
   async function gerar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
+    setAviso(null);
     setEnviando(true);
     try {
       const res = await fetch("/api/sites/gerar", {
@@ -54,7 +61,12 @@ export default function NovoSiteClient({
       });
       const corpo = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErro(corpo.erro || "Não foi possível gerar o site agora.");
+        if (corpo.emLiberacao) {
+          setEmLiberacao(true);
+          setAviso(corpo.erro);
+        } else {
+          setErro(corpo.erro || "Não foi possível gerar o site agora.");
+        }
         return;
       }
       router.push(`/painel/sites/${corpo.siteId}`);
@@ -66,7 +78,7 @@ export default function NovoSiteClient({
     }
   }
 
-  const bloqueado = enviando || semSaldo || gerandoInicial;
+  const bloqueado = enviando || semSaldo || gerandoInicial || emLiberacao;
   const qtdServicos = servicos.split("\n").filter((s) => s.trim()).length;
 
   return (
@@ -206,6 +218,11 @@ export default function NovoSiteClient({
           {erro}
         </p>
       )}
+      {aviso && (
+        <p role="status" className={`mt-4 ${ALERTA_AVISO}`}>
+          {aviso}
+        </p>
+      )}
       {semSaldo && (
         <p className={`mt-4 ${ALERTA_ERRO}`}>
           Suas gerações acabaram. Elas voltam na renovação do plano, ou compre o pacote em{" "}
@@ -221,7 +238,7 @@ export default function NovoSiteClient({
 
       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
         <button type="submit" disabled={bloqueado} className={BOTAO}>
-          {enviando ? "Gerando o site..." : "Gerar site (usa 1 geração)"}
+          {enviando ? "Gerando o site..." : emLiberacao ? "Liberação em andamento" : "Gerar site (usa 1 geração)"}
         </button>
         {enviando && (
           <p role="status" className="text-sm text-ink-2">

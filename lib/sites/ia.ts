@@ -30,14 +30,20 @@ function esforco(): Esforco {
   return v && ESFORCOS.includes(v) ? v : "medium";
 }
 
+// "message" é o texto que a pessoa vê (sempre amigável). "tecnica" é o
+// detalhe que vai para Gestão > Erros.
 export class ErroIA extends Error {
   constructor(
     message: string,
     public uso: { modelo: string; entrada: number; saida: number; custo: number } | null = null,
+    public tecnica: string = message,
   ) {
     super(message);
   }
 }
+
+export const MSG_IA_INDISPONIVEL =
+  "A geração de sites está indisponível no momento. Já fomos avisados e vamos resolver; tente de novo mais tarde.";
 
 export interface ResultadoIA {
   html: string;
@@ -126,12 +132,15 @@ async function chamar(conteudo: string, tamanhoMinimo: number): Promise<Resultad
   // Sem nova tentativa automática: a rota tem 300 s na Vercel, e uma
   // segunda tentativa passaria disso. Se falhar, o saldo volta e a pessoa
   // tenta de novo.
-  const cliente = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 280_000, maxRetries: 0 });
   const nomeModelo = modelo();
   const inicio = Date.now();
 
   let mensagem: Anthropic.Beta.BetaMessage;
   try {
+    // Sem chave, o construtor da Anthropic dá erro: cai no catch abaixo e
+    // vira a mensagem amigável (a rota já confere a chave antes, mas fica
+    // a garantia).
+    const cliente = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 280_000, maxRetries: 0 });
     const stream = cliente.beta.messages.stream({
       model: nomeModelo,
       max_tokens: 32000,
@@ -147,16 +156,22 @@ async function chamar(conteudo: string, tamanhoMinimo: number): Promise<Resultad
     if (e instanceof Anthropic.RateLimitError) {
       throw new ErroIA("A IA está muito ocupada agora. Tente de novo em alguns minutos.");
     }
-    if (e instanceof Anthropic.AuthenticationError) {
-      throw new ErroIA("A chave da IA (ANTHROPIC_API_KEY) não foi aceita. Avise o suporte.");
+    // Chave inválida, revogada ou sem permissão (401/403): problema de
+    // configuração nosso, não da pessoa.
+    if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) {
+      throw new ErroIA(MSG_IA_INDISPONIVEL, null, `ANTHROPIC_API_KEY recusada pela Anthropic (erro ${e.status}): ${e.message}`);
     }
     if (e instanceof Anthropic.APIConnectionTimeoutError) {
       throw new ErroIA("A IA demorou demais para responder. Tente de novo.");
     }
     if (e instanceof Anthropic.APIError) {
-      throw new ErroIA(`A IA não respondeu (erro ${e.status ?? "de conexão"}). Tente de novo em instantes.`);
+      throw new ErroIA(
+        "A IA não respondeu agora. Tente de novo em instantes.",
+        null,
+        `Anthropic: erro ${e.status ?? "de conexão"}: ${e.message}`,
+      );
     }
-    throw e;
+    throw new ErroIA(MSG_IA_INDISPONIVEL, null, `Falha ao chamar a Anthropic: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   // Custo: soma cada tentativa (inclusive a do modelo alternativo, se a

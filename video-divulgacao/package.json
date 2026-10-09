@@ -1,0 +1,23 @@
+{
+  "name": "artemis-prospect-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vídeo de divulgação do Ártemis Prospect (Remotion), separado do site.",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render Divulgacao out/artemis-prospect.mp4",
+    "still": "remotion still Divulgacao out/quadro.png --frame=870",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "@remotion/fonts": "4.0.534",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}

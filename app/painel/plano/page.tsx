@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { lerGeracaoAtiva } from "@/lib/sites/interruptor";
 import PlanoClient from "./PlanoClient";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,10 @@ export default async function PlanoPage() {
     .select("sites_restantes, sites_extras")
     .maybeSingle<{ sites_restantes: number; sites_extras: number }>();
 
+  // Interruptor da geração de sites (etapa 24): desligado, o card do
+  // Platina avisa que a geração é liberada em até 24 horas.
+  const geracaoSitesAtiva = await lerGeracaoAtiva(supabase);
+
   // A assinatura mais recente (viva ou a última cancelada).
   const { data: assinatura } = await supabase
     .from("assinaturas")
@@ -62,6 +67,7 @@ export default async function PlanoPage() {
 
   return (
     <PlanoClient
+      geracaoSitesAtiva={geracaoSitesAtiva}
       perfil={{
         plano: perfil?.plano ?? "gratis",
         creditosDesbloqueio: perfil?.creditos_desbloqueio ?? 0,

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TituloPagina } from "@/components/ui";
-import { AvisoHospedagem } from "@/components/sites/Pecas";
+import { AvisoHospedagem, AvisoLiberacao } from "@/components/sites/Pecas";
+import { lerGeracaoAtiva } from "@/lib/sites/interruptor";
 import { ESTILOS } from "@/lib/sites/dados";
 import { lerSaldoSites } from "@/lib/sites/saldo";
 import SiteClient from "./SiteClient";
@@ -40,7 +41,7 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
     }>();
   if (!site) notFound();
 
-  const saldo = await lerSaldoSites(supabase);
+  const [saldo, geracaoAtiva] = await Promise.all([lerSaldoSites(supabase), lerGeracaoAtiva(supabase)]);
   const expirado = !site.html || (!!site.html_expira_em && new Date(site.html_expira_em) <= new Date());
   const estilo = ESTILOS.find((e) => e.id === site.estilo)?.nome ?? site.estilo;
   const expiraEm = site.html_expira_em
@@ -59,6 +60,7 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
         descricao={`Estilo ${estilo} · versão ${site.versao}${expiraEm && !expirado ? ` · guardado até ${expiraEm}` : ""}`}
       />
       <AvisoHospedagem className="mt-5" />
+      {saldo?.platinaAtivo && !geracaoAtiva && <AvisoLiberacao className="mt-3" />}
 
       {site.status !== "pronto" || expirado ? (
         <p className="mt-6 text-ink-2">
@@ -73,7 +75,7 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
           id={site.id}
           html={site.html!}
           ajustesGratis={site.ajustes_gratis}
-          podeAjustar={!!saldo?.platinaAtivo}
+          podeAjustar={!!saldo?.platinaAtivo && geracaoAtiva}
           temSaldo={!!saldo && saldo.sitesRestantes + saldo.sitesExtras > 0}
         />
       )}

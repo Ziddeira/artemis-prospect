@@ -31,7 +31,8 @@ e, se for rodar localmente, copie `.env.example` para `.env.local`:
 - `ASAAS_WEBHOOK_TOKEN` — segredo que você inventa e cadastra igual no
   webhook do Asaas; a rota recusa (401) qualquer evento sem ele.
 - `ANTHROPIC_API_KEY` — chave server-only da API da Anthropic (Claude),
-  usada só pela geração de site com IA do plano Platina (etapa 23).
+  usada só pela geração de site com IA do plano Platina (etapa 23). Pode
+  ficar vazia enquanto a geração estiver desligada (etapa 24).
   Nunca é exposta ao navegador. Gere em console.anthropic.com > API Keys.
 - `SITES_IA_MODELO` (opcional) — modelo da geração de sites. Padrão
   `claude-opus-5-5`. Para gastar cerca de metade, use `claude-sonnet-5-5`.
@@ -251,6 +252,18 @@ cada um no SQL Editor do Supabase:
     devolvido se a IA falhar. Os cupons continuam valendo só para Solo e
     Pro. Veja "Geração de site com IA" abaixo.
 
+24. `supabase/etapa24-interruptor-sites.sql` — interruptor geral da
+    geração de sites (tabela `configuracoes_sistema`, chave
+    `geracao_sites_ativa`). **Começa desligado.** Desligado, o Platina
+    continua à venda e quem assina recebe na hora o plano, os
+    desbloqueios, as buscas e tudo do Pro; só a geração de site espera
+    (o assinante vê "liberação em andamento, em até 24 horas" e nenhuma
+    chamada à Anthropic é feita). Liga e desliga em Gestão > Sites IA, na
+    hora, sem novo deploy (fica na auditoria). Ao ligar, cada assinante
+    Platina recebe um aviso no sino. Quando alguém entra no Platina, todo
+    administrador recebe um aviso no sino, e a Visão geral destaca quem
+    está esperando a liberação.
+
 ### Geração de site com IA (plano Platina)
 
 Em "Meus leads", cada lead tem o botão "Gerar site". Um formulário curto
@@ -272,6 +285,16 @@ pede ajustes.
   O HTML fica guardado 30 dias depois da última versão (leva nome,
   telefone e endereço vindos do Google) e a rotina diária do sino apaga
   os vencidos. O registro de custo fica.
+- **Interruptor (etapa 24):** com a geração desligada, o servidor para
+  antes de olhar a chave e as funções SQL de reserva recusam com o código
+  AP503 ("liberação em andamento"). Sem a etapa 24 rodada, o site trata
+  como desligado.
+- **Chave ausente ou inválida:** o assinante vê "indisponível no
+  momento", nunca uma tela de erro. Sem a chave, nada é descontado (a
+  rota para antes de reservar); com a chave recusada pela Anthropic, a
+  geração volta para o saldo. Os dois casos vão para Gestão > Erros
+  (origem `sites_ia`), e Gestão > Sites IA avisa se a chave não estiver
+  cadastrada.
 - **Chave da IA:** `ANTHROPIC_API_KEY` só no servidor. O saldo e os
   limites são conferidos pelas funções SQL `reservar_geracao_site` e
   `reservar_ajuste_site`; só o servidor (service_role) grava o

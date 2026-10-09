@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TituloPagina, BOTAO } from "@/components/ui";
-import { AvisoHospedagem, ConvitePlatina, SaldoSitesResumo } from "@/components/sites/Pecas";
+import { AvisoHospedagem, AvisoLiberacao, ConvitePlatina, SaldoSitesResumo } from "@/components/sites/Pecas";
+import { lerGeracaoAtiva } from "@/lib/sites/interruptor";
 import { cacheValido, type DadosLead } from "@/lib/leads/dadosLead";
 import { MSG_FALTA_ETAPA23, type IdiomaSite } from "@/lib/sites/dados";
 import { lerSaldoSites } from "@/lib/sites/saldo";
@@ -19,7 +20,7 @@ export default async function NovoSitePage({ searchParams }: { searchParams: Pro
   const supabase = await createClient();
   if (!supabase) return <p className="text-ink-2">Supabase não configurado neste ambiente.</p>;
 
-  const saldo = await lerSaldoSites(supabase);
+  const [saldo, geracaoAtiva] = await Promise.all([lerSaldoSites(supabase), lerGeracaoAtiva(supabase)]);
   if (!saldo) {
     return (
       <div>
@@ -63,6 +64,7 @@ export default async function NovoSitePage({ searchParams }: { searchParams: Pro
         descricao="Confira os dados, escolha o estilo e a IA monta uma landing page de uma página, pronta para baixar."
       />
       <div className="mt-6 flex flex-col gap-4">
+        {saldo.platinaAtivo && !geracaoAtiva && <AvisoLiberacao />}
         {saldo.platinaAtivo ? (
           <SaldoSitesResumo
             sitesRestantes={saldo.sitesRestantes}
@@ -88,6 +90,7 @@ export default async function NovoSitePage({ searchParams }: { searchParams: Pro
           }}
           semSaldo={saldo.sitesRestantes + saldo.sitesExtras < 1}
           gerando={saldo.gerando}
+          emLiberacao={!geracaoAtiva}
         />
       )}
     </div>

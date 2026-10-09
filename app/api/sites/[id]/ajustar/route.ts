@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ehEstilo, validarDadosSite } from "@/lib/sites/dados";
 import { ajustarSite } from "@/lib/sites/ia";
-import { erro, executarGeracao, prepararContextoSites, respostaErroReserva } from "@/lib/sites/servidor";
+import { erro, executarGeracao, falhaInesperada, prepararContextoSites, respostaErroReserva } from "@/lib/sites/servidor";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -12,7 +12,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // grátis; do 3º em diante conta como geração nova. Quem decide é o banco
 // (reservar_ajuste_site).
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  try {
+    return await ajustar(request, (await params).id);
+  } catch (e) {
+    return falhaInesperada("ajustar", e);
+  }
+}
+
+async function ajustar(request: Request, id: string) {
   if (!UUID.test(id)) return erro("Site não encontrado.", 404);
 
   const ctx = await prepararContextoSites();

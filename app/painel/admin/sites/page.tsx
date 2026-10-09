@@ -1,11 +1,18 @@
 import { exigirAdminPagina } from "@/lib/admin/acesso";
 import { PACOTE_SITES, PLANOS } from "@/lib/planos";
 import { formatarUsd, PRECOS_USD_POR_MILHAO } from "@/lib/sites/custos";
-import { MSG_FALTA_ETAPA23, faltaEtapa23 } from "@/lib/sites/dados";
-import { MODELO_PADRAO } from "@/lib/sites/ia";
+import { MSG_FALTA_ETAPA23, MSG_FALTA_ETAPA24, faltaEtapa23 } from "@/lib/sites/dados";
+import { MODELO_PADRAO, iaConfigurada } from "@/lib/sites/ia";
+import Interruptor from "./Interruptor";
 import { FalhaCarregar, Numero, Secao, Tabela, dataDoDia, dataHora, inteiro } from "../comum";
 
 export const dynamic = "force-dynamic";
+
+interface Aguardando {
+  ativa: boolean;
+  atualizado_em: string | null;
+  assinantes: { user_id: string; email: string | null; apelido: string | null; desde: string | null }[];
+}
 
 interface SitesIA {
   mes: string;
@@ -50,12 +57,26 @@ const DOLAR_EM_REAIS = 5.5;
 // tokens e custo estimado pelo servidor.
 export default async function SitesIAPage() {
   const supabase = await exigirAdminPagina();
-  const { data, error } = await supabase.rpc("admin_sites_ia");
-  if (error) {
-    if (faltaEtapa23(error.code)) return <p className="text-ink-2">{MSG_FALTA_ETAPA23}</p>;
-    return <FalhaCarregar error={error} />;
+  const [ia, espera] = await Promise.all([supabase.rpc("admin_sites_ia"), supabase.rpc("admin_platina_aguardando")]);
+
+  // Interruptor e quem espera a liberação (etapa 24).
+  const blocoInterruptor = espera.error ? (
+    <p className="text-ink-2">{faltaEtapa23(espera.error.code) ? MSG_FALTA_ETAPA24 : "Não foi possível ler o interruptor agora."}</p>
+  ) : (
+    <BlocoInterruptor dados={espera.data as Aguardando} />
+  );
+
+  if (ia.error) {
+    return (
+      <div>
+        {blocoInterruptor}
+        <div className="mt-6">
+          {faltaEtapa23(ia.error.code) ? <p className="text-ink-2">{MSG_FALTA_ETAPA23}</p> : <FalhaCarregar error={ia.error} />}
+        </div>
+      </div>
+    );
   }
-  const s = data as SitesIA;
+  const s = ia.data as SitesIA;
   const custo = Number(s.custo_usd);
   const receitaPlatina = s.assinantes_platina * PLANOS.platina.preco + s.pacotes_vendidos * PACOTE_SITES.preco;
   const custoReais = custo * DOLAR_EM_REAIS;
@@ -64,6 +85,8 @@ export default async function SitesIAPage() {
 
   return (
     <div>
+      <Secao titulo="Interruptor">{blocoInterruptor}</Secao>
+
       <Secao titulo="Neste mês" descricao="Mês corrente, horário de Brasília. Custo estimado pelos tokens que a IA informou.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Numero rotulo="Sites gerados" valor={inteiro(Number(s.geracoes))} dica={`${inteiro(Number(s.usuarios))} usuário(s)`} />
@@ -235,6 +258,47 @@ export default async function SitesIAPage() {
           </Tabela>
         )}
       </Secao>
+    </div>
+  );
+}
+
+function BlocoInterruptor({ dados }: { dados: Aguardando }) {
+  const assinantes = dados.assinantes ?? [];
+  return (
+    <div className="flex flex-col gap-3">
+      <Interruptor ativa={dados.ativa} aguardando={assinantes.length} chaveConfigurada={iaConfigurada()} />
+      {!dados.ativa && assinantes.length > 0 && (
+        <div>
+          <p className="mb-2 text-sm font-semibold text-destaque">
+            {assinantes.length === 1
+              ? "1 assinante Platina está esperando a liberação"
+              : `${inteiro(assinantes.length)} assinantes Platina estão esperando a liberação`}{" "}
+            (prometido: em até 24 horas após a assinatura).
+          </p>
+          <Tabela>
+            <thead>
+              <tr>
+                <th>Assinante</th>
+                <th>No Platina desde</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assinantes.map((a) => (
+                <tr key={a.user_id}>
+                  <td>
+                    <span className="block font-semibold text-ink">{a.apelido ?? "—"}</span>
+                    <span className="block text-xs text-muted">{a.email ?? "sem e-mail"}</span>
+                  </td>
+                  <td>{a.desde ? dataHora(a.desde) : "colocado pela Gestão"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Tabela>
+        </div>
+      )}
+      {dados.atualizado_em && (
+        <p className="text-xs text-muted">Última mudança: {dataHora(dados.atualizado_em)} (fica na auditoria).</p>
+      )}
     </div>
   );
 }

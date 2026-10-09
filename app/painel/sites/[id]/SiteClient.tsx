@@ -45,7 +45,8 @@ export default function SiteClient({
       });
       const corpo = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErro(corpo.erro || "Não foi possível ajustar o site agora.");
+        if (corpo.emLiberacao) setMensagem(corpo.erro);
+        else setErro(corpo.erro || "Não foi possível ajustar o site agora.");
         return;
       }
       setPedido("");
@@ -136,7 +137,9 @@ export default function SiteClient({
               {mensagem}
             </p>
           )}
-          {!podeAjustar && <p className="mt-2 text-sm text-ink-2">Ajustes são do plano Platina.</p>}
+          {!podeAjustar && (
+            <p className="mt-2 text-sm text-ink-2">Os ajustes ficam disponíveis enquanto o Platina e a geração de sites estão ativos.</p>
+          )}
           {podeAjustar && cobra && !temSaldo && (
             <p className="mt-2 text-sm text-ink-2">Você não tem gerações disponíveis para este ajuste.</p>
           )}

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { EstadoVazio, TituloPagina, BOTAO, BOTAO_NEUTRO, CARTAO } from "@/components/ui";
 import { IconeSite } from "@/components/Icones";
-import { AvisoHospedagem, ConvitePlatina, SaldoSitesResumo } from "@/components/sites/Pecas";
+import { AvisoHospedagem, AvisoLiberacao, ConvitePlatina, SaldoSitesResumo } from "@/components/sites/Pecas";
+import { lerGeracaoAtiva } from "@/lib/sites/interruptor";
 import { ESTILOS, MSG_FALTA_ETAPA23 } from "@/lib/sites/dados";
 import { lerSaldoSites } from "@/lib/sites/saldo";
 
@@ -31,7 +32,7 @@ export default async function SitesPage() {
   const supabase = await createClient();
   if (!supabase) return <p className="text-ink-2">Supabase não configurado neste ambiente.</p>;
 
-  const saldo = await lerSaldoSites(supabase);
+  const [saldo, geracaoAtiva] = await Promise.all([lerSaldoSites(supabase), lerGeracaoAtiva(supabase)]);
   if (!saldo) {
     return (
       <div>
@@ -57,6 +58,7 @@ export default async function SitesPage() {
       />
 
       <div className="mt-6 flex flex-col gap-4">
+        {saldo.platinaAtivo && !geracaoAtiva && <AvisoLiberacao />}
         {saldo.platinaAtivo ? (
           <SaldoSitesResumo
             sitesRestantes={saldo.sitesRestantes}

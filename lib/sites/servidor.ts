@@ -4,8 +4,9 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { registrarErro } from "@/lib/erros/registrar";
-import { ErroIA, iaConfigurada, type ResultadoIA } from "./ia";
-import { MSG_FALTA_ETAPA23, faltaEtapa23 } from "./dados";
+import { ErroIA, MSG_IA_INDISPONIVEL, iaConfigurada, type ResultadoIA } from "./ia";
+import { MSG_FALTA_ETAPA23, MSG_LIBERACAO_SITES, faltaEtapa23 } from "./dados";
+import { lerGeracaoAtiva } from "./interruptor";
 
 type ClienteServidor = NonNullable<Awaited<ReturnType<typeof createClient>>>;
 type ClienteAdmin = NonNullable<ReturnType<typeof createAdminClient>>;
@@ -20,19 +21,52 @@ export function erro(mensagem: string, status = 400, extra?: Record<string, unkn
   return NextResponse.json({ erro: mensagem, ...extra }, { status });
 }
 
-// Confere configuração e login ANTES de reservar qualquer geração: sem a
-// chave da IA ou a service_role, nada é gasto.
+// Resposta de "liberação em andamento": não é erro, a tela mostra como
+// aviso (emLiberacao: true).
+export function respostaLiberacao(mensagem = MSG_LIBERACAO_SITES) {
+  return NextResponse.json({ erro: mensagem, emLiberacao: true }, { status: 409 });
+}
+
+// Confere login, o interruptor (etapa 24) e a configuração ANTES de
+// reservar qualquer geração. Com o interruptor desligado, a chave da IA
+// nem é olhada e nenhuma chamada à Anthropic acontece.
 export async function prepararContextoSites(): Promise<ContextoSites | NextResponse> {
   const supabase = await createClient();
-  const admin = createAdminClient();
-  if (!supabase || !admin) return erro("Supabase não configurado neste ambiente (falta SUPABASE_SERVICE_ROLE_KEY?).", 500);
-  if (!iaConfigurada()) return erro("A geração de sites ainda não está configurada (falta ANTHROPIC_API_KEY no servidor).", 500);
+  if (!supabase) return erro("Não foi possível falar com o servidor agora. Tente de novo em instantes.", 503);
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return erro("É preciso estar logado.", 401);
+
+  // Desligado (ou etapa 24 não rodada): para aqui. As funções SQL de
+  // reserva conferem de novo.
+  if (!(await lerGeracaoAtiva(supabase))) {
+    // Quem não é Platina vê o convite, não a mensagem de liberação.
+    const { data: plano } = await supabase.rpc("meu_plano").maybeSingle<{ plano: string }>();
+    if (plano && plano.plano !== "platina") {
+      return erro("A geração de site com IA é do plano Platina.", 402, { precisaPlatina: true });
+    }
+    return respostaLiberacao();
+  }
+
+  const admin = createAdminClient();
+  if (!admin || !iaConfigurada()) {
+    const falta = !admin ? "SUPABASE_SERVICE_ROLE_KEY" : "ANTHROPIC_API_KEY";
+    console.error(`[sites] Geração ligada, mas falta ${falta} no servidor.`);
+    await registrarErro("sites_ia", `Geração de sites ligada, mas falta ${falta} no servidor. Nada foi cobrado.`, {}, user.id);
+    return erro(`${MSG_IA_INDISPONIVEL} Nada foi descontado do seu saldo.`, 503);
+  }
+
   return { supabase, admin, user };
+}
+
+// Cinto de segurança das rotas: qualquer erro não previsto vira uma
+// mensagem amigável em JSON (a tela nunca recebe uma página de erro).
+export async function falhaInesperada(contexto: string, e: unknown) {
+  console.error(`[sites/${contexto}] erro inesperado:`, e);
+  await registrarErro("sites_ia", `Erro inesperado em /api/sites (${contexto}): ${e instanceof Error ? e.message : String(e)}`);
+  return erro("Não foi possível concluir agora. Se uma geração tinha sido descontada, ela volta sozinha em até 15 minutos.", 500);
 }
 
 // Erro de uma função SQL de reserva (plano, saldo, limites).
@@ -42,6 +76,7 @@ export function respostaErroReserva(error: { code?: string; message: string }, c
     return erro(MSG_FALTA_ETAPA23, 500);
   }
   if (error.code === "AP402") return erro(error.message, 402, { precisaPlatina: true });
+  if (error.code === "AP503") return respostaLiberacao(error.message.replace(/^ERROR:\s*/i, ""));
   if (error.code === "P0001") return erro(error.message.replace(/^ERROR:\s*/i, ""), 400);
   console.error(`[sites/${contexto}]`, error.code, error.message);
   return erro("Não foi possível falar com o banco agora. Tente de novo.", 500);
@@ -76,7 +111,7 @@ export async function executarGeracao(
     // A IA respondeu, mas a gravação falhou: o custo existiu e é gravado.
     const uso = ia?.uso ?? (r ? { modelo: r.modelo, entrada: r.entrada, saida: r.saida, custo: r.custo } : null);
     const mensagem = ia ? ia.message : "Não foi possível gerar o site agora. Seu saldo foi devolvido; tente de novo.";
-    const tecnica = e instanceof Error ? e.message : String(e);
+    const tecnica = ia ? ia.tecnica : e instanceof Error ? e.message : String(e);
     const { error } = await ctx.admin.rpc("falhar_geracao_site", {
       p_geracao_id: geracaoId,
       p_erro: tecnica,

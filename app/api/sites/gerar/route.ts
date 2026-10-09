@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ehEstilo, validarDadosSite } from "@/lib/sites/dados";
 import { gerarSite } from "@/lib/sites/ia";
-import { erro, executarGeracao, prepararContextoSites, respostaErroReserva } from "@/lib/sites/servidor";
+import { erro, executarGeracao, falhaInesperada, prepararContextoSites, respostaErroReserva } from "@/lib/sites/servidor";
 
 export const dynamic = "force-dynamic";
 // A IA leva de 1 a 3 minutos para escrever o site.
@@ -13,6 +13,14 @@ export const maxDuration = 300;
 // 2. o servidor chama a IA;
 // 3. o resultado (ou a falha, que devolve o saldo) é gravado com o custo.
 export async function POST(request: Request) {
+  try {
+    return await gerar(request);
+  } catch (e) {
+    return falhaInesperada("gerar", e);
+  }
+}
+
+async function gerar(request: Request) {
   const ctx = await prepararContextoSites();
   if (ctx instanceof NextResponse) return ctx;
 

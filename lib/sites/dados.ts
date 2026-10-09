@@ -110,6 +110,16 @@ export function faltaEtapa23(codigo: string | undefined) {
   return ["PGRST202", "PGRST205", "42883", "42703", "42P01"].includes(codigo ?? "");
 }
 
+// Interruptor desligado (etapa 24): o Platina já funciona, só a geração
+// de site espera a liberação.
+export const MSG_LIBERACAO_SITES =
+  "A geração de sites do seu plano está sendo liberada. Isso acontece em até 24 horas após a assinatura, e você recebe um aviso no sino quando estiver pronta. Enquanto isso, todo o resto do Platina já está funcionando.";
+
+export const AVISO_LIBERACAO_24H = "A geração de sites é liberada em até 24 horas após a assinatura.";
+
+export const MSG_FALTA_ETAPA24 =
+  "O interruptor da geração de sites ainda não existe no banco: rode supabase/etapa24-interruptor-sites.sql no Supabase.";
+
 export const MSG_FALTA_ETAPA23 =
   "A geração de sites ainda não está ativa: falta rodar os scripts da etapa 23 no Supabase.";
 

@@ -1,11 +1,13 @@
 import React from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AREA_SEGURA } from "../config";
 import { COR, FONTE_TITULO } from "../marca";
 
 // Legenda grande de cada cena. O trecho em "destaque" sai em amarelo,
 // como no título do site ("ainda não têm site").
-// Fica no terço de baixo, mas acima da faixa que o TikTok e o Reels cobrem
-// com botões e descrição.
+// Fica centralizada e sempre dentro da área segura (config.ts): a última
+// linha encosta na margem de baixo e, se o texto quebrar em mais linhas,
+// ele cresce para cima.
 export const Legenda: React.FC<{ texto: string; destaque?: string; duracao: number }> = ({
   texto,
   destaque,
@@ -26,9 +28,9 @@ export const Legenda: React.FC<{ texto: string; destaque?: string; duracao: numb
     <div
       style={{
         position: "absolute",
-        left: 100,
-        right: 100,
-        top: 1330,
+        left: AREA_SEGURA.lados,
+        right: AREA_SEGURA.lados,
+        bottom: AREA_SEGURA.base,
         display: "flex",
         justifyContent: "center",
         opacity: entrada * saida,
@@ -43,7 +45,7 @@ export const Legenda: React.FC<{ texto: string; destaque?: string; duracao: numb
           fontWeight: 700,
           fontStyle: "italic",
           textTransform: "uppercase",
-          fontSize: 66,
+          fontSize: 72,
           lineHeight: 1.04,
           color: COR.branco,
           textWrap: "balance",

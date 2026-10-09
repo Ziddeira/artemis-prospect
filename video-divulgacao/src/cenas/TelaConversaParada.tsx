@@ -4,7 +4,8 @@ import { Balao, Cabecalho, Divisor } from "../componentes/Conversa";
 import { COR, FONTE_TEXTO } from "../marca";
 
 // Cena 2, primeira parte: a conversa parada em "oi, tudo bem?", sem resposta.
-export const TelaConversaParada: React.FC = () => {
+// "duracao" é a duração da cena 2; os balões entram em frações dela.
+export const TelaConversaParada: React.FC<{ duracao: number }> = ({ duracao }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const surge = (inicio: number) => {
@@ -13,7 +14,7 @@ export const TelaConversaParada: React.FC = () => {
   };
 
   return (
-    <AbsoluteFill style={{ background: "#0D0D0D" }}>
+    <AbsoluteFill style={{ background: COR.fundo }}>
       <div
         style={{
           position: "absolute",
@@ -27,11 +28,11 @@ export const TelaConversaParada: React.FC = () => {
         }}
       >
         <Divisor texto="Segunda" />
-        <Balao lado="eu" hora="09:12" estado="enviada" style={{ ...surge(6), transformOrigin: "100% 0" }}>
+        <Balao lado="eu" hora="09:12" estado="enviada" style={{ ...surge(2), transformOrigin: "100% 0" }}>
           oi, tudo bem?
         </Balao>
-        <Divisor texto="Quinta" style={surge(34)} />
-        <Balao lado="eu" hora="16:40" estado="enviada" style={{ ...surge(42), transformOrigin: "100% 0" }}>
+        <Divisor texto="Quinta" style={surge(duracao * 0.22)} />
+        <Balao lado="eu" hora="16:40" estado="enviada" style={{ ...surge(duracao * 0.26), transformOrigin: "100% 0" }}>
           conseguiu ver?
         </Balao>
       </div>

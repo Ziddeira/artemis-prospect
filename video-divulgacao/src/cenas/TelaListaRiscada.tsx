@@ -5,7 +5,7 @@ import { progresso } from "../componentes/util";
 import { COR, FONTE_TEXTO, FONTE_TITULO } from "../marca";
 
 // Cena 2, segunda parte: a lista de contatos que nunca responderam,
-// sendo riscada um por um.
+// sendo riscada um por um, bem rápido.
 const CONTATOS = [
   { nome: "Barbearia do Zé", iniciais: "BZ", hora: "seg" },
   { nome: "Studio Bella Unhas", iniciais: "SB", hora: "seg" },
@@ -20,7 +20,7 @@ export const TelaListaRiscada: React.FC = () => {
   const frame = useCurrentFrame();
 
   return (
-    <AbsoluteFill style={{ background: "#0D0D0D", fontFamily: FONTE_TEXTO }}>
+    <AbsoluteFill style={{ background: COR.fundo, fontFamily: FONTE_TEXTO }}>
       <div style={{ position: "absolute", top: 86, left: 30, right: 30 }}>
         <div style={{ fontFamily: FONTE_TITULO, fontWeight: 700, fontSize: 46, color: COR.branco }}>Conversas</div>
         <div style={{ marginTop: 4, fontSize: 22, fontWeight: 600, color: COR.risco }}>
@@ -29,7 +29,7 @@ export const TelaListaRiscada: React.FC = () => {
       </div>
       <div style={{ position: "absolute", top: 200, left: 0, right: 0 }}>
         {CONTATOS.map((c, i) => {
-          const risco = progresso(frame, 6 + i * 7, 12 + i * 7);
+          const risco = progresso(frame, 4 + i * 5, 9 + i * 5);
           return (
             <div
               key={c.nome}

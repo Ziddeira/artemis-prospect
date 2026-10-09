@@ -24,6 +24,8 @@ for (const f of FONTES) {
 
 export const COR = {
   amarelo: "#FFD60A",
+  // Fundo do vídeo (pedido do roteiro) e preto das peças da marca.
+  fundo: "#0D0D0D",
   preto: "#0A0A0A",
   branco: "#FFFFFF",
   superficie: "#121212",
@@ -36,6 +38,8 @@ export const COR = {
   texto3: "#737373",
   texto2: "#A3A3A3",
   textoCampo: "#D4D4D4",
+  // Verde do botão de WhatsApp (cena 4).
+  whatsapp: "#25D366",
   // Traço que risca os contatos que não responderam (o "vermelho" do site).
   risco: "#FF8A80",
 } as const;
@@ -43,18 +47,3 @@ export const COR = {
 // Canto cortado das peças da marca (manual, seção 6.1).
 export const corte = (px: number) =>
   `polygon(0 0, calc(100% - ${px}px) 0, 100% ${px}px, 100% 100%, ${px}px 100%, 0 calc(100% - ${px}px))`;
-
-// Tempos em quadros (30 quadros = 1 segundo).
-export const FPS = 30;
-export const s = (segundos: number) => Math.round(segundos * FPS);
-
-export const CENAS = {
-  pinos: { de: s(0), ate: s(3) },
-  dificil: { de: s(3), ate: s(8) },
-  busca: { de: s(8), ate: s(14) },
-  whatsapp: { de: s(14), ate: s(20) },
-  resposta: { de: s(20), ate: s(25) },
-  final: { de: s(25), ate: s(30) },
-} as const;
-
-export const DURACAO = s(30);

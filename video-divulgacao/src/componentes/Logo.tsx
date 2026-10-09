@@ -3,10 +3,7 @@ import { COR, FONTE_TITULO } from "../marca";
 
 // Símbolo oficial (public/brand/simbolo.svg): "A" amarelo, losango branco e
 // as quatro cantoneiras de HUD.
-export const Simbolo: React.FC<{ tamanho: number; semCantoneiras?: boolean }> = ({
-  tamanho,
-  semCantoneiras,
-}) => (
+export const Simbolo: React.FC<{ tamanho: number; semCantoneiras?: boolean }> = ({ tamanho, semCantoneiras }) => (
   <svg width={tamanho} height={tamanho} viewBox="0 0 64 64" fill="none" style={{ display: "block" }}>
     {semCantoneiras ? null : (
       <path
@@ -23,10 +20,7 @@ export const Simbolo: React.FC<{ tamanho: number; semCantoneiras?: boolean }> = 
 
 // Assinatura "ÁRTEMIS / — PROSPECT" com as proporções do manual (2.2):
 // PROSPECT = 24% do tamanho de ÁRTEMIS; espaço entre linhas = 11%.
-export const Assinatura: React.FC<{ tamanho: number; centralizada?: boolean }> = ({
-  tamanho,
-  centralizada,
-}) => (
+export const Assinatura: React.FC<{ tamanho: number; centralizada?: boolean }> = ({ tamanho, centralizada }) => (
   <div
     style={{
       display: "flex",

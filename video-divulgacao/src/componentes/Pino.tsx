@@ -20,6 +20,6 @@ export const PinoArtemis: React.FC<{ largura: number }> = ({ largura }) => (
 export const PinoCinza: React.FC<{ largura: number }> = ({ largura }) => (
   <svg width={largura} height={largura * 1.3} viewBox="0 0 100 130" style={{ display: "block" }}>
     <path d={GOTA} fill={COR.cinza} />
-    <circle cx="50" cy="48" r="17" fill={COR.preto} />
+    <circle cx="50" cy="48" r="17" fill={COR.fundo} />
   </svg>
 );

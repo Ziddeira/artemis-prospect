@@ -2,7 +2,7 @@ import React from "react";
 import { COR, FONTE_TEXTO } from "../marca";
 
 // Medidas do celular dentro do vídeo de 1080 x 1920.
-export const CELULAR = { largura: 590, altura: 1180, topo: 110, borda: 16 } as const;
+export const CELULAR = { largura: 560, altura: 1120, topo: 130, borda: 16 } as const;
 export const TELA = {
   largura: CELULAR.largura - CELULAR.borda * 2,
   altura: CELULAR.altura - CELULAR.borda * 2,
@@ -10,10 +10,12 @@ export const TELA = {
 
 // Moldura de celular genérico com barra de status. O conteúdo da tela vem
 // em "children" e é trocado a cada cena.
-export const Celular: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({
-  children,
-  style,
-}) => (
+// "semBarraDeStatus" serve para a gravação de tela, que já traz a sua.
+export const Celular: React.FC<{
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  semBarraDeStatus?: boolean;
+}> = ({ children, style, semBarraDeStatus }) => (
   <div
     style={{
       position: "absolute",
@@ -21,7 +23,7 @@ export const Celular: React.FC<{ children: React.ReactNode; style?: React.CSSPro
       top: CELULAR.topo,
       width: CELULAR.largura,
       height: CELULAR.altura,
-      borderRadius: 78,
+      borderRadius: 74,
       background: "#1A1A1A",
       border: `3px solid ${COR.bordaForte}`,
       padding: CELULAR.borda - 3,
@@ -34,13 +36,13 @@ export const Celular: React.FC<{ children: React.ReactNode; style?: React.CSSPro
         position: "relative",
         width: "100%",
         height: "100%",
-        borderRadius: 62,
+        borderRadius: 58,
         overflow: "hidden",
         background: COR.preto,
       }}
     >
       {children}
-      <BarraDeStatus />
+      {semBarraDeStatus ? null : <BarraDeStatus />}
     </div>
   </div>
 );

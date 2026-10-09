@@ -1,12 +1,12 @@
 import React from "react";
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { LogoHorizontal } from "../componentes/Logo";
 import { digitado, progresso } from "../componentes/util";
 import { COR, FONTE_TEXTO, FONTE_TITULO, corte } from "../marca";
 
-// Cenas 3 e 4 dentro do celular: a busca no Ártemis Prospect, a lista de
-// leads e o toque no botão de WhatsApp do primeiro lead.
-// Os quadros aqui contam a partir do começo desta tela (8s do vídeo).
+// Tela de exemplo da cena 3: uma busca no Ártemis Prospect simulada.
+// Só aparece enquanto a sua gravação (public/video/tela-busca.mp4) não
+// estiver lá. Os quadros contam a partir do começo desta tela.
 
 export const TEMPO_APP = {
   revela: 16, // círculo amarelo abrindo a tela
@@ -15,8 +15,6 @@ export const TEMPO_APP = {
   botao: 58,
   rolagem: 66,
   cards: 76,
-  mira: 176, // 14s: começa a cena 4
-  toque: 204,
 } as const;
 
 const LEADS = [
@@ -35,22 +33,40 @@ export const TelaApp: React.FC = () => {
   const revela = progresso(frame, 0, t.revela);
   const rolagem = spring({ frame: frame - t.rolagem, fps, config: { damping: 200 }, durationInFrames: 16 });
   const apertaBotao = frame >= t.botao && frame < t.botao + 6 ? 0.95 : 1;
-  const foco = progresso(frame, t.mira, t.mira + 10);
 
   return (
     <AbsoluteFill
       style={{
-        background: COR.preto,
+        background: COR.fundo,
         fontFamily: FONTE_TEXTO,
         clipPath: `circle(${revela * 140}% at 50% 38%)`,
       }}
     >
       {/* Conteúdo que "rola" para cima quando chegam os resultados */}
-      <div style={{ position: "absolute", top: 170, left: 24, right: 24, transform: `translateY(${-rolagem * 480}px)` }}>
-        <div style={{ fontFamily: FONTE_TITULO, fontWeight: 600, fontSize: 17, letterSpacing: "0.3em", color: COR.amarelo }}>
+      <div
+        style={{ position: "absolute", top: 170, left: 24, right: 24, transform: `translateY(${-rolagem * 530}px)` }}
+      >
+        <div
+          style={{
+            fontFamily: FONTE_TITULO,
+            fontWeight: 600,
+            fontSize: 17,
+            letterSpacing: "0.3em",
+            color: COR.amarelo,
+          }}
+        >
           BUSCAR LEADS
         </div>
-        <div style={{ marginTop: 8, fontFamily: FONTE_TITULO, fontWeight: 700, fontSize: 40, color: COR.branco, lineHeight: 1.05 }}>
+        <div
+          style={{
+            marginTop: 8,
+            fontFamily: FONTE_TITULO,
+            fontWeight: 700,
+            fontSize: 40,
+            color: COR.branco,
+            lineHeight: 1.05,
+          }}
+        >
           Quem ainda não tem site?
         </div>
 
@@ -114,18 +130,12 @@ export const TelaApp: React.FC = () => {
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 16 }}>
           {LEADS.map((lead, i) => {
             const entrada = spring({ frame: frame - (t.cards + i * 5), fps, config: { damping: 18, stiffness: 160 } });
-            const escolhido = i === 0;
             return (
               <div
                 key={lead.nome}
-                style={{
-                  position: "relative",
-                  opacity: Math.min(1, entrada * 1.3) * (escolhido ? 1 : 1 - foco * 0.65),
-                  transform: `translateX(${(1 - entrada) * 120}px)`,
-                }}
+                style={{ opacity: Math.min(1, entrada * 1.3), transform: `translateX(${(1 - entrada) * 120}px)` }}
               >
-                <CardLead {...lead} toque={escolhido ? frame - t.toque : -1} />
-                {escolhido ? <Mira frame={frame - t.mira} /> : null}
+                <CardLead {...lead} />
               </div>
             );
           })}
@@ -176,24 +186,28 @@ const Campo: React.FC<{ rotulo: string; valor: string; ativo: boolean }> = ({ ro
         }}
       >
         {valor}
-        <i style={{ display: "block", width: 2, height: 32, marginLeft: 2, background: cursor ? COR.amarelo : "transparent" }} />
+        <i
+          style={{
+            display: "block",
+            width: 2,
+            height: 32,
+            marginLeft: 2,
+            background: cursor ? COR.amarelo : "transparent",
+          }}
+        />
       </div>
     </div>
   );
 };
 
-const CardLead: React.FC<{ nome: string; bairro: string; situacao: string; score: number; toque: number }> = ({
+const CardLead: React.FC<{ nome: string; bairro: string; situacao: string; score: number }> = ({
   nome,
   bairro,
   situacao,
   score,
-  toque,
 }) => {
   const semSite = situacao === "SEM SITE";
   const alto = score >= 80;
-  // Toque no botão: ele afunda um pouco e sai uma onda branca.
-  const afunda = toque >= 0 && toque < 8 ? 0.92 : 1;
-  const onda = toque >= 0 ? progresso(toque, 0, 14) : 0;
 
   return (
     <div
@@ -226,7 +240,15 @@ const CardLead: React.FC<{ nome: string; bairro: string; situacao: string; score
           {situacao}
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
         <div
           style={{
             width: 62,
@@ -248,8 +270,6 @@ const CardLead: React.FC<{ nome: string; bairro: string; situacao: string; score
         </div>
         <div
           style={{
-            position: "relative",
-            overflow: "hidden",
             padding: "10px 14px",
             background: COR.amarelo,
             color: COR.preto,
@@ -258,48 +278,11 @@ const CardLead: React.FC<{ nome: string; bairro: string; situacao: string; score
             fontWeight: 700,
             fontSize: 17,
             letterSpacing: "0.06em",
-            transform: `scale(${afunda})`,
           }}
         >
           WHATSAPP
-          {onda > 0 && onda < 1 ? (
-            <i
-              style={{
-                position: "absolute",
-                left: "50%",
-                top: "50%",
-                width: 200 * onda,
-                height: 200 * onda,
-                marginLeft: -100 * onda,
-                marginTop: -100 * onda,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.55)",
-                opacity: 1 - onda,
-              }}
-            />
-          ) : null}
         </div>
       </div>
-    </div>
-  );
-};
-
-// Cantoneiras de mira (manual 6.5) que "travam" no lead escolhido.
-const Mira: React.FC<{ frame: number }> = ({ frame }) => {
-  const { fps } = useVideoConfig();
-  if (frame < 0) return null;
-  const e = spring({ frame, fps, config: { damping: 14, stiffness: 140 } });
-  const folga = interpolate(e, [0, 1], [60, 12]);
-  const canto = (pos: React.CSSProperties, bordas: React.CSSProperties) => (
-    <i style={{ position: "absolute", width: 26, height: 26, ...pos, ...bordas }} />
-  );
-  const linha = `4px solid ${COR.amarelo}`;
-  return (
-    <div style={{ position: "absolute", inset: -folga, opacity: Math.min(1, e * 1.5), pointerEvents: "none" }}>
-      {canto({ left: 0, top: 0 }, { borderLeft: linha, borderTop: linha })}
-      {canto({ right: 0, top: 0 }, { borderRight: linha, borderTop: linha })}
-      {canto({ left: 0, bottom: 0 }, { borderLeft: linha, borderBottom: linha })}
-      {canto({ right: 0, bottom: 0 }, { borderRight: linha, borderBottom: linha })}
     </div>
   );
 };

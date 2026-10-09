@@ -7,7 +7,7 @@ Projeto separado do site, feito com [Remotion](https://www.remotion.dev)
 - Duração: 30 segundos (soma das cenas, ajustável), 30 quadros por segundo
 - Saída: `out/artemis-prospect.mp4`
 
-## Os dois comandos
+## Os comandos
 
 Precisa do Node.js 18 ou mais novo. Na primeira vez, entre na pasta e instale:
 
@@ -21,23 +21,68 @@ Depois é só:
 ```bash
 npm run previa      # abre o editor no navegador para assistir (com som)
 npm run exportar    # gera o MP4 em out/artemis-prospect.mp4
+npm run gerar-sons  # recria a música e os efeitos (só se mudar as durações)
 ```
 
 Na primeira exportação, o Remotion baixa sozinho um Chrome próprio
 (uns 100 MB). As fontes do site já estão dentro do projeto (`public/fontes`).
 
+## Som
+
+O vídeo já sai com som, mesmo sem nenhum arquivo seu:
+
+- **Trilha original** (`public/audio/gerado/musica.mp3`), criada pelo próprio
+  projeto só com matemática (osciladores, ruído e filtros), sem baixar nada.
+  Por isso não tem problema de direitos. Ela segue as cenas: tensa e com
+  "relógio" nas cenas 1 e 2, sobe até a virada, entra a batida na cena 3,
+  ganha um arpejo na 4, fica mais brilhante na 5 e fecha com uma pancada e
+  um acorde que se apaga na 6.
+- **Efeitos sonoros** (`public/audio/gerado/*.wav`), cada um no quadro exato
+  da animação:
+
+| Momento | Efeito |
+|---|---|
+| Pino amarelo caindo e batendo no chão | `queda` + `impacto` |
+| Ondas do pino pulsando | `sonar` |
+| Pinos cinzas surgindo | `chuva` (dezenas de estalinhos) |
+| Cortes secos (cenas 1, 2 e 6) | `corte` |
+| Mensagens "oi, tudo bem?" e "conseguiu ver?" | `enviar` |
+| Cada contato riscado | `risco` |
+| Pino caindo no celular e a tela acendendo | `queda` + `impacto` + `brilho` |
+| Cartões de lead entrando | `deslizar` |
+| Etiquetas dos cartões | `pop` (o seu, ou o gerado) |
+| Telefone desbloqueado | `desbloquear` |
+| Botão verde de WhatsApp | `ding` |
+| Cabeça da Ártemis entrando | `deslizar` |
+| Cantoneiras travando na logo | `trava` + `brilho` |
+| "Comenta ÁRTEMIS" e o balão | `impacto` + `bolha` |
+
+**O seu arquivo sempre tem prioridade:** se você colocar
+`public/audio/musica.mp3` ou `public/audio/pop.mp3`, eles tocam no lugar dos
+gerados. A narração é sempre a sua (o projeto não cria voz).
+
+Ajustes em `src/config.ts`:
+
+- `VOLUMES.efeitos`: volume de todos os efeitos juntos.
+- `VOLUMES.musicaSemNarracao`: volume da música quando não há narração.
+- `EFEITOS_LIGADOS = false`: desliga todos os efeitos.
+
+Se você mudar as durações das cenas, os efeitos acompanham sozinhos. A
+música gerada não: rode `npm run gerar-sons` para ela ser refeita no novo
+tempo. Se esquecer, o editor avisa na faixa vermelha.
+
 ## Onde colocar cada arquivo seu
 
 Os arquivos abaixo já existem **vazios** (0 bytes), só para marcar o lugar.
 É só substituir pelo seu, **com o mesmo nome**. Enquanto um deles estiver
-vazio ou faltando, o vídeo funciona do mesmo jeito: fica sem aquele som, ou
-mostra uma tela de exemplo no lugar da gravação.
+vazio ou faltando, o vídeo funciona do mesmo jeito: toca o som gerado (música
+e pop), fica sem narração, ou mostra uma tela de exemplo no lugar da gravação.
 
 | Arquivo | O que é | Dicas |
 |---|---|---|
 | `public/audio/narracao.mp3` | Sua narração | Comece a falar já no segundo 0 do arquivo; ela toca desde o início do vídeo. |
-| `public/audio/musica.mp3` | Música livre de direitos | Pode ser mais curta que o vídeo: ela repete sozinha. Some suavemente no fim. |
-| `public/audio/pop.mp3` | Efeito curto | Toca uma vez quando cada etiqueta de lead aparece (3 vezes na cena 4). Ideal: menos de 1 segundo. |
+| `public/audio/musica.mp3` | Música livre de direitos (opcional) | Substitui a trilha gerada. Pode ser mais curta que o vídeo: ela repete sozinha. Some suavemente no fim. |
+| `public/audio/pop.mp3` | Efeito curto (opcional) | Substitui o pop gerado. Toca quando cada etiqueta de lead aparece (3 vezes na cena 4). Ideal: menos de 1 segundo. |
 | `public/video/tela-busca.mp4` | Gravação de tela da busca | Grave o celular em pé. O vídeo preenche a tela do celular e corta as sobras se a proporção for diferente. Fica sem som (quem fala é a narração). |
 | `public/artemis/artemis-foto.png` | Cabeça da Ártemis | **Já vem** (cópia da imagem do site). Troque se quiser outra expressão. |
 | `public/artemis/logo.svg` | Logo da cena 5 | **Já vem** (o símbolo oficial da marca). O nome "ÁRTEMIS PROSPECT" é escrito pelo código logo abaixo. |
@@ -112,6 +157,8 @@ Os nomes das empresas e o telefone dos cartões são inventados, só para ilustr
   `TelaListaRiscada`, `TelaGravacao`, `CenaLeads`, `CenaArtemis`, `CenaComenta`).
   `TelaApp` é a tela de exemplo que aparece enquanto a gravação não chega.
 - `src/arquivos.ts`: confere seus arquivos e calcula o ducking.
+- `src/componentes/Efeitos.tsx`: em que momento toca cada efeito sonoro.
+- `scripts/gerar-sons.mjs`: a "receita" da música e dos efeitos.
 - `src/marca.ts`: cores e fontes do manual da marca.
 
 ## Escolhas que fogem do manual da marca (pedidas no roteiro)

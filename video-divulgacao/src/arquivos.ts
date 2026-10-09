@@ -4,13 +4,20 @@
 import { getAudioData, getAudioDurationInSeconds } from "@remotion/media-utils";
 import { ALL_FORMATS, Input, UrlSource } from "mediabunny";
 import { staticFile } from "remotion";
-import { ARQUIVOS, VOLUMES } from "./config";
+import { NOMES_EFEITOS } from "./componentes/Efeitos";
+import { ARQUIVOS, EFEITOS_LIGADOS, VOLUMES } from "./config";
 import { DURACAO_TOTAL, FPS } from "./tempo";
 
 export type Recursos = {
   temNarracao: boolean;
-  temMusica: boolean;
-  temPop: boolean;
+  // Arquivo de música e de pop que vai tocar: o seu ou, se estiver vazio,
+  // o gerado pelo projeto. null = nenhum dos dois.
+  musica: string | null;
+  pop: string | null;
+  // Duração da música escolhida, em segundos.
+  duracaoMusica: number;
+  // Efeitos sonoros encontrados em public/audio/gerado.
+  efeitos: string[];
   temGravacao: boolean;
   temCabeca: boolean;
   temLogo: boolean;
@@ -24,8 +31,10 @@ export type Recursos = {
 
 export const RECURSOS_VAZIOS: Recursos = {
   temNarracao: false,
-  temMusica: false,
-  temPop: false,
+  musica: null,
+  pop: null,
+  duracaoMusica: 0,
+  efeitos: [],
   temGravacao: false,
   temCabeca: false,
   temLogo: false,
@@ -64,14 +73,28 @@ const duracaoDoVideo = async (src: string) => {
   return entrada.computeDuration();
 };
 
+// O seu arquivo, se existir; senão, o gerado; senão, nenhum.
+const seuOuGerado = async (seu: string, gerado: string) => {
+  for (const arquivo of [seu, gerado]) {
+    const duracao = await abre(arquivo, getAudioDurationInSeconds);
+    if (duracao !== null) return { arquivo, duracao };
+  }
+  return null;
+};
+
 export const prepararVideo = async (): Promise<Recursos> => {
-  const [narracao, musica, pop, gravacao, cabeca, logo] = await Promise.all([
+  const [narracao, musica, pop, gravacao, cabeca, logo, efeitos] = await Promise.all([
     abre(ARQUIVOS.narracao, (src) => getAudioData(src)),
-    abre(ARQUIVOS.musica, getAudioDurationInSeconds),
-    abre(ARQUIVOS.pop, getAudioDurationInSeconds),
+    seuOuGerado(ARQUIVOS.musica, ARQUIVOS.musicaGerada),
+    seuOuGerado(ARQUIVOS.pop, ARQUIVOS.popGerado),
     abre(ARQUIVOS.gravacaoDeTela, duracaoDoVideo),
     existe(ARQUIVOS.cabecaArtemis),
     existe(ARQUIVOS.logo),
+    EFEITOS_LIGADOS
+      ? Promise.all(
+          NOMES_EFEITOS.map(async (nome) => ((await existe(`${ARQUIVOS.pastaDosEfeitos}/${nome}.wav`)) ? nome : null)),
+        )
+      : Promise.resolve([]),
   ]);
 
   const duracaoNarracao = narracao?.durationInSeconds ?? 0;
@@ -84,8 +107,10 @@ export const prepararVideo = async (): Promise<Recursos> => {
 
   return {
     temNarracao: narracao !== null,
-    temMusica: musica !== null,
-    temPop: pop !== null,
+    musica: musica?.arquivo ?? null,
+    pop: pop?.arquivo ?? null,
+    duracaoMusica: musica?.duracao ?? 0,
+    efeitos: efeitos.filter((n): n is NonNullable<typeof n> => n !== null),
     temGravacao: gravacao !== null,
     temCabeca: cabeca,
     temLogo: logo,

@@ -11,6 +11,12 @@ import { COR } from "../marca";
 
 const PONTA = { x: 540, y: 900 }; // onde a ponta do pino amarelo encosta
 const LARGURA_AMARELO = 190;
+// Exportados para os efeitos sonoros (Efeitos.tsx) baterem com a imagem.
+export const MOLA_QUEDA = { damping: 11, stiffness: 120, mass: 0.9 };
+export const CORTES_CAMERA = [0.5, 0.78]; // frações da cena 1
+export const INICIO_PINOS_CINZAS = 0.2;
+export const INICIO_ONDAS = 16;
+
 // Atraso e saída de cada pino são frações da duração da cena (0 a 1),
 // para a animação acompanhar se você mudar o tempo no config.ts.
 type PinoGerado = { x: number; y: number; largura: number; atraso: number; saida: number };
@@ -34,7 +40,7 @@ const PINOS: PinoGerado[] = (() => {
         x,
         y,
         largura: 44 + random(`t${c}-${l}`) * 32,
-        atraso: 0.2 + (distancia / 1100) * 0.45 + random(`a${c}-${l}`) * 0.06,
+        atraso: INICIO_PINOS_CINZAS + (distancia / 1100) * 0.45 + random(`a${c}-${l}`) * 0.06,
         saida: random(`s${c}-${l}`) * 4,
       });
     }
@@ -48,10 +54,10 @@ export const Pinos: React.FC<{ duracao: number }> = ({ duracao }) => {
   const { fps } = useVideoConfig();
   const SAIDA = duracao;
   // Cortes secos: aproxima no meio da cena e volta perto do fim.
-  const camera = frame >= duracao * 0.5 && frame < duracao * 0.78 ? 1.18 : 1;
+  const camera = frame >= duracao * CORTES_CAMERA[0] && frame < duracao * CORTES_CAMERA[1] ? 1.18 : 1;
 
   // Queda com um quique no final.
-  const queda = spring({ frame, fps, config: { damping: 11, stiffness: 120, mass: 0.9 } });
+  const queda = spring({ frame, fps, config: MOLA_QUEDA });
   // Pulso suave depois que pousa.
   const pulso = frame > 20 ? 1 + 0.05 * Math.sin(((frame - 20) / 15) * Math.PI) : 1;
   const saidaAmarelo = 1 - progresso(frame, SAIDA, SAIDA + 8);
@@ -86,7 +92,7 @@ export const Pinos: React.FC<{ duracao: number }> = ({ duracao }) => {
         {/* Ondas que saem do pino amarelo, deitadas no "chão" */}
         <svg width={1080} height={1920} style={{ position: "absolute", inset: 0, opacity: saidaAmarelo }}>
           {[0, 1, 2].map((k) => {
-            const inicio = 16 + k * 12;
+            const inicio = INICIO_ONDAS + k * 12;
             if (frame < inicio) return null;
             const t = ((frame - inicio) % 36) / 36;
             const r = 30 + t * 280;

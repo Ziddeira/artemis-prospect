@@ -51,10 +51,10 @@ const TELEFONE = "(48) 99123-4567";
 
 // Momentos da cena, em frações da duração (0 = começo, 1 = fim).
 // O Video.tsx usa ENTRADA_ETIQUETA para tocar o "pop" na hora certa.
-const ENTRADA_CARTAO = [0.05, 0.25, 0.45];
+export const ENTRADA_CARTAO = [0.05, 0.25, 0.45];
 const ATRASO_ETIQUETA = 0.07;
-const TELEFONE_APARECE = 0.68;
-const WHATSAPP_ENTRA = 0.78;
+export const TELEFONE_APARECE = 0.68;
+export const WHATSAPP_ENTRA = 0.78;
 
 export const ENTRADA_ETIQUETA = (duracao: number) =>
   ENTRADA_CARTAO.map((f) => Math.round((f + ATRASO_ETIQUETA) * duracao));

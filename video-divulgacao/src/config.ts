@@ -41,7 +41,8 @@ export const CHAMADA_FINAL = { linha1: "Comenta", linha2: "ÁRTEMIS" };
 // ------------------------------------------------------------
 // Se algum arquivo faltar ou estiver vazio (0 bytes), o vídeo funciona
 // do mesmo jeito: sem aquele som, ou com a tela de exemplo no lugar da
-// gravação.
+// gravação. Para a música e o pop, se o seu arquivo estiver vazio, entra
+// o som gerado pelo projeto (pasta public/audio/gerado).
 export const ARQUIVOS = {
   narracao: "audio/narracao.mp3",
   musica: "audio/musica.mp3",
@@ -49,7 +50,18 @@ export const ARQUIVOS = {
   gravacaoDeTela: "video/tela-busca.mp4",
   cabecaArtemis: "artemis/artemis-foto.png",
   logo: "artemis/logo.svg",
+  // Sons criados pelo "npm run gerar-sons" (usados quando os seus faltam).
+  musicaGerada: "audio/gerado/musica.mp3",
+  popGerado: "audio/gerado/pop.wav",
+  pastaDosEfeitos: "audio/gerado",
 };
+
+// ------------------------------------------------------------
+// 3b. Efeitos sonoros
+// ------------------------------------------------------------
+// Sons curtos nos momentos de ação (pino caindo, cortes, riscos, cartões,
+// mira travando...). Para desligar todos, troque para false.
+export const EFEITOS_LIGADOS = true;
 
 // ------------------------------------------------------------
 // 4. Gravação de tela (cena 3)
@@ -67,11 +79,15 @@ export const GRAVACAO = {
 // ------------------------------------------------------------
 export const VOLUMES = {
   narracao: 1,
-  // Música quando ninguém está falando.
+  // Música quando ninguém está falando (com narração).
   musica: 0.25,
+  // Música quando o vídeo não tem narração nenhuma.
+  musicaSemNarracao: 0.5,
   // Música enquanto a narração fala (o "ducking").
   musicaSobNarracao: 0.07,
   pop: 0.6,
+  // Todos os efeitos sonoros juntos.
+  efeitos: 0.55,
   // Sensibilidade para perceber que a narração está falando. Se a música
   // não abaixar, diminua (ex.: 0.01). Se abaixar até nos silêncios,
   // aumente (ex.: 0.04).

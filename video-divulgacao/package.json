@@ -6,6 +6,7 @@
   "scripts": {
     "previa": "remotion studio",
     "exportar": "remotion render Divulgacao out/artemis-prospect.mp4",
+    "gerar-sons": "node scripts/gerar-sons.mjs",
     "dev": "remotion studio",
     "render": "remotion render Divulgacao out/artemis-prospect.mp4",
     "typecheck": "tsc --noEmit"

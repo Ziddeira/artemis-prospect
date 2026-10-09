@@ -4,7 +4,7 @@ import { Recursos } from "./arquivos";
 import { CenaArtemis } from "./cenas/CenaArtemis";
 import { CenaComenta } from "./cenas/CenaComenta";
 import { CenaLeads, ENTRADA_ETIQUETA } from "./cenas/CenaLeads";
-import { PinoQueda, POUSO } from "./cenas/PinoQueda";
+import { PinoQueda } from "./cenas/PinoQueda";
 import { Pinos } from "./cenas/Pinos";
 import { TelaConversaParada } from "./cenas/TelaConversaParada";
 import { TelaGravacao } from "./cenas/TelaGravacao";
@@ -15,19 +15,14 @@ import { Trilha } from "./componentes/Trilha";
 import { progresso } from "./componentes/util";
 import { ARQUIVOS, LEGENDAS } from "./config";
 import { COR, FONTE_TEXTO } from "./marca";
+import { APROXIMA, INICIO_GRAVACAO, INICIO_LISTA, QUEDA_PINO } from "./momentos";
 import { CENAS, DURACAO_TOTAL, FPS, ORDEM_DAS_CENAS } from "./tempo";
 
 // Linha do tempo do vídeo inteiro. Os tempos vêm do config.ts.
 // Cada <Sequence> diz em que quadro um pedaço começa ("from") e por
 // quantos quadros ele fica na tela ("durationInFrames").
 
-const { pinos, dificil, busca, leads, artemis, comenta } = CENAS;
-
-// Dentro da cena 2: primeiro a conversa, depois (corte seco) a lista.
-const INICIO_LISTA = dificil.de + Math.round(dificil.duracao * 0.42);
-// O pino amarelo cai no celular um pouco antes da cena 3 e abre a gravação.
-const QUEDA_PINO = busca.de - 12;
-const INICIO_GRAVACAO = QUEDA_PINO + POUSO;
+const { pinos, dificil, leads, artemis, comenta } = CENAS;
 
 export const Video: React.FC<Recursos> = (recursos) => {
   const momentosDoPop = ENTRADA_ETIQUETA(leads.duracao).map((q) => leads.de + q);
@@ -95,7 +90,7 @@ const CelularNaTela: React.FC<{ recursos: Recursos }> = ({ recursos }) => {
   // Cena 2, ritmo rápido: o celular "estala" na tela em poucos quadros...
   const entra = spring({ frame: frame - inicio, fps, config: { damping: 200 }, durationInFrames: 7 });
   // ...e há um corte seco aproximando do balão sem resposta.
-  const aproxima = frame >= inicio + dificil.duracao * 0.18 && frame < INICIO_LISTA ? 1.3 : 1;
+  const aproxima = frame >= APROXIMA && frame < INICIO_LISTA ? 1.3 : 1;
   // Cena 3 para a 4, com calma: o celular encolhe e some.
   const sai = progresso(frame, fim, fim + 14);
 
@@ -146,19 +141,29 @@ const Entrada: React.FC<{ quadros: number; children: React.ReactNode }> = ({ qua
 };
 
 // Avisos que aparecem SÓ no editor (npm run previa), nunca no MP4:
-// arquivos seus que ainda faltam e narração maior que o vídeo.
+// arquivos seus que ainda faltam, narração maior que o vídeo e música
+// gerada com outra duração.
 const AvisosDoEditor: React.FC<{ recursos: Recursos }> = ({ recursos }) => {
+  const usandoGerado = (seu: string, escolhido: string | null) =>
+    escolhido === seu ? null : `public/${seu}${escolhido ? " (tocando o som gerado)" : ""}`;
   const faltando = [
-    !recursos.temNarracao && ARQUIVOS.narracao,
-    !recursos.temMusica && ARQUIVOS.musica,
-    !recursos.temPop && ARQUIVOS.pop,
-    !recursos.temGravacao && ARQUIVOS.gravacaoDeTela,
-    !recursos.temCabeca && ARQUIVOS.cabecaArtemis,
-    !recursos.temLogo && ARQUIVOS.logo,
-  ].filter(Boolean);
+    !recursos.temNarracao && `public/${ARQUIVOS.narracao}`,
+    usandoGerado(ARQUIVOS.musica, recursos.musica),
+    usandoGerado(ARQUIVOS.pop, recursos.pop),
+    !recursos.temGravacao && `public/${ARQUIVOS.gravacaoDeTela} (tela de exemplo no lugar)`,
+    !recursos.temCabeca && `public/${ARQUIVOS.cabecaArtemis}`,
+    !recursos.temLogo && `public/${ARQUIVOS.logo}`,
+  ].filter((f): f is string => Boolean(f));
   const duracaoVideo = DURACAO_TOTAL / FPS;
-  const narracaoSobra = recursos.duracaoNarracao > duracaoVideo;
-  if (faltando.length === 0 && !narracaoSobra) return null;
+  const virgula = (n: number) => n.toFixed(1).replace(".", ",");
+  const avisos: string[] = [];
+  if (recursos.duracaoNarracao > duracaoVideo)
+    avisos.push(
+      `A narração tem ${virgula(recursos.duracaoNarracao)}s e o vídeo ${virgula(duracaoVideo)}s: aumente as durações em src/config.ts.`,
+    );
+  if (recursos.musica === ARQUIVOS.musicaGerada && Math.abs(recursos.duracaoMusica - duracaoVideo) > 0.2)
+    avisos.push("A música gerada tem outra duração: rode  npm run gerar-sons  para ela acompanhar as cenas.");
+  if (faltando.length === 0 && avisos.length === 0) return null;
   return (
     <div
       style={{
@@ -175,16 +180,15 @@ const AvisosDoEditor: React.FC<{ recursos: Recursos }> = ({ recursos }) => {
         lineHeight: 1.35,
       }}
     >
-      {narracaoSobra ? (
-        <div style={{ marginBottom: faltando.length ? 10 : 0 }}>
-          A narração tem {recursos.duracaoNarracao.toFixed(1).replace(".", ",")}s e o vídeo{" "}
-          {duracaoVideo.toFixed(1).replace(".", ",")}s: aumente as durações em src/config.ts.
+      {avisos.map((a) => (
+        <div key={a} style={{ marginBottom: 10 }}>
+          {a}
         </div>
-      ) : null}
-      {faltando.length ? "Arquivos vazios ou faltando (aviso só no editor):" : null}
+      ))}
+      {faltando.length ? "Seus arquivos vazios ou faltando (aviso só no editor):" : null}
       {faltando.map((f) => (
-        <div key={String(f)} style={{ fontWeight: 500 }}>
-          public/{f}
+        <div key={f} style={{ fontWeight: 500 }}>
+          {f}
         </div>
       ))}
     </div>

@@ -10,6 +10,11 @@ import { COR } from "../marca";
 // para a mascote sobre fundo escuro.
 
 const LOGO = { tamanho: 300, centroY: 1000 };
+// Frações da cena em que a logo começa a se formar e o nome aparece
+// (exportadas para os efeitos sonoros baterem com a imagem).
+export const INICIO_LOGO = 0.14;
+export const INICIO_NOME = 0.36;
+export const MOLA_TRAVA = { damping: 16, stiffness: 120 };
 
 export const CenaArtemis: React.FC<{ duracao: number; temCabeca: boolean; temLogo: boolean }> = ({
   duracao,
@@ -23,11 +28,11 @@ export const CenaArtemis: React.FC<{ duracao: number; temCabeca: boolean; temLog
   const cabeca = spring({ frame: frame - 2, fps, config: { damping: 12, stiffness: 90 } });
   // Logo: as quatro cantoneiras amarelas vêm dos cantos da tela e "travam";
   // o símbolo aparece de baixo para cima; depois o nome.
-  const inicioLogo = Math.round(duracao * 0.14);
-  const trava = spring({ frame: frame - inicioLogo, fps, config: { damping: 16, stiffness: 120 } });
+  const inicioLogo = Math.round(duracao * INICIO_LOGO);
+  const trava = spring({ frame: frame - inicioLogo, fps, config: MOLA_TRAVA });
   const simbolo = spring({ frame: frame - inicioLogo - 10, fps, config: { damping: 200 }, durationInFrames: 16 });
   const cantoneirasSomem = progresso(frame, inicioLogo + 26, inicioLogo + 40);
-  const nome = Math.round(duracao * 0.36);
+  const nome = Math.round(duracao * INICIO_NOME);
 
   return (
     <AbsoluteFill

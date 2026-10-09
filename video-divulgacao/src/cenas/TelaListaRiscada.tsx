@@ -16,6 +16,9 @@ const CONTATOS = [
   { nome: "Clínica Sorriso", iniciais: "CS", hora: "qui" },
 ];
 
+// Quadro (desde o começo da lista) em que cada risco começa.
+export const MOMENTOS_RISCOS = CONTATOS.map((_, i) => 4 + i * 5);
+
 export const TelaListaRiscada: React.FC = () => {
   const frame = useCurrentFrame();
 
@@ -29,7 +32,7 @@ export const TelaListaRiscada: React.FC = () => {
       </div>
       <div style={{ position: "absolute", top: 200, left: 0, right: 0 }}>
         {CONTATOS.map((c, i) => {
-          const risco = progresso(frame, 4 + i * 5, 9 + i * 5);
+          const risco = progresso(frame, MOMENTOS_RISCOS[i], MOMENTOS_RISCOS[i] + 5);
           return (
             <div
               key={c.nome}

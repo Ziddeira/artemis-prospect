@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import SeletorAvatar from "@/components/perfil/SeletorAvatar";
 import SeletorTema from "@/components/tema/SeletorTema";
+import PadAssinatura from "@/components/contratos/PadAssinatura";
 import { IconeGoogle } from "@/components/BotaoGoogle";
 import { IconeCadeado } from "@/components/Icones";
 import { Alerta, chamar, type Mensagem } from "@/components/perfil/comum";
 import {
   ALERTA_AVISO,
   BOTAO,
+  BOTAO_NEUTRO,
   BOTAO_SECUNDARIO,
   CAMPO,
   CARTAO as CARTAO_BASE,
@@ -52,6 +54,7 @@ export default function PerfilClient({
   modelosIngles,
   modelosPortugues,
   modelosAtivos,
+  assinaturaSalva,
 }: {
   userId: string;
   email: string;
@@ -68,6 +71,8 @@ export default function PerfilClient({
   modelosPortugues: ModelosMensagem;
   // false = etapa 21 ainda não rodada no banco.
   modelosAtivos: boolean;
+  // Assinatura dos contratos. null = etapa 24 ainda não rodada no banco.
+  assinaturaSalva: boolean | null;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -94,6 +99,7 @@ export default function PerfilClient({
           <CartaoFoto userId={userId} perfil={perfil} email={email} pendente={pendente} />
           <CartaoDados perfil={perfil} desativado={pendente === "etapa5"} />
           <CartaoComunidade apelido={perfil?.apelido ?? null} mostrarVendas={mostrarVendas} />
+          <CartaoAssinatura salva={assinaturaSalva} />
         </div>
         <div className="flex flex-col gap-6">
           <CartaoAcesso acesso={acesso} />
@@ -346,6 +352,103 @@ function CartaoComunidade({ apelido, mostrarVendas }: { apelido: string | null; 
 // começa sozinho lá.
 // Tema claro, escuro ou do sistema. Fica salvo no perfil e vale em
 // qualquer aparelho (no celular, também pelo ícone no topo).
+// Assinatura dos contratos ---------------------------------------------
+// Fica no bucket privado "contratos" e é usada para assinar os contratos
+// sem desenhar de novo a cada vez.
+function CartaoAssinatura({ salva }: { salva: boolean | null }) {
+  const router = useRouter();
+  const [editando, setEditando] = useState(false);
+  const [nova, setNova] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [mensagem, setMensagem] = useState<Mensagem>(null);
+  // Muda a cada troca, para a prévia não vir do cache do navegador.
+  const [versao, setVersao] = useState(0);
+  const aoAssinar = useCallback((png: string | null) => setNova(png), []);
+
+  async function salvar() {
+    if (!nova) {
+      setMensagem({ tipo: "erro", texto: "Assine no quadro (ou envie uma imagem) antes de salvar." });
+      return;
+    }
+    setSalvando(true);
+    const erro = await chamar("/api/perfil/assinatura", "POST", { imagem: nova });
+    setSalvando(false);
+    if (erro) {
+      setMensagem({ tipo: "erro", texto: erro });
+      return;
+    }
+    setMensagem({ tipo: "ok", texto: "Assinatura salva. Ela aparece como opção ao enviar um contrato." });
+    setEditando(false);
+    setNova(null);
+    setVersao((v) => v + 1);
+    router.refresh();
+  }
+
+  async function remover() {
+    setSalvando(true);
+    const erro = await chamar("/api/perfil/assinatura", "DELETE");
+    setSalvando(false);
+    setMensagem(erro ? { tipo: "erro", texto: erro } : { tipo: "ok", texto: "Assinatura removida." });
+    if (!erro) router.refresh();
+  }
+
+  return (
+    <section id="assinatura" aria-labelledby="titulo-assinatura" className={CARTAO}>
+      <h2 id="titulo-assinatura" className={TITULO_CARTAO}>
+        Assinatura dos contratos
+      </h2>
+      <p className="mt-1 mb-4 text-sm text-ink-2">
+        Desenhe com o dedo ou o mouse, ou envie uma foto da sua assinatura. Ela fica guardada só para você, para
+        assinar os contratos sem desenhar de novo.
+      </p>
+      {salva === null ? (
+        <p className={ALERTA_AVISO}>
+          A assinatura ainda não foi ativada no banco. Rode os scripts supabase/etapa24-1-contratos-base.sql e
+          supabase/etapa24-2-contratos-funcoes.sql no Supabase.
+        </p>
+      ) : editando ? (
+        <div className="flex flex-col gap-3">
+          <PadAssinatura onChange={aoAssinar} id="assinatura-perfil" />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={salvar} disabled={salvando} className={BOTAO}>
+              {salvando ? "Salvando..." : "Salvar assinatura"}
+            </button>
+            <button type="button" onClick={() => setEditando(false)} className={BOTAO_NEUTRO}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {salva ? (
+            <div className="flex h-24 items-center justify-center border border-line-strong bg-white p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/perfil/assinatura?v=${versao}`} alt="Sua assinatura salva" className="max-h-full max-w-full object-contain" />
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Nenhuma assinatura salva.</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setEditando(true)} className={BOTAO_SECUNDARIO}>
+              {salva ? "Trocar assinatura" : "Criar assinatura"}
+            </button>
+            {salva && (
+              <button type="button" onClick={remover} disabled={salvando} className={BOTAO_NEUTRO}>
+                Remover
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {mensagem && (
+        <div className="mt-3">
+          <Alerta mensagem={mensagem} />
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CartaoAparencia() {
   return (
     <section aria-labelledby="titulo-aparencia" className={CARTAO}>

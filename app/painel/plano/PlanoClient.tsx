@@ -369,6 +369,7 @@ export default function PlanoClient({
                 <li>{p.hospedagem ? "Modo Hospedagem incluso" : "Sem modo Hospedagem"}</li>
                 {p.internacional && <li>Aba Internacional ({nomesPaisesInternacionais()})</li>}
                 {p.sites > 0 && <li>{p.sites} gerações de site com IA por mês</li>}
+                {p.contratos && <li>Gerador de contratos com assinatura online</li>}
               </ul>
               <div className="mt-4">
                 {id === "gratis" ? (

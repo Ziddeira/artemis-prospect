@@ -337,6 +337,7 @@ function CartaoPlano({ plano, destaque }: { plano: Plano; destaque: boolean }) {
         <li>{plano.hospedagem ? "Modo Hospedagem incluso" : "Sem modo Hospedagem"}</li>
         {plano.internacional && <li>Aba Internacional ({nomesPaisesInternacionais()})</li>}
         {plano.sites > 0 && <li>{plano.sites} sites gerados com IA por mês, para baixar e hospedar onde quiser</li>}
+        {plano.contratos && <li>Gerador de contrato de criação de site, com assinatura online do cliente</li>}
       </ul>
       <Link href="/cadastro" className={`${destaque ? BOTAO : BOTAO_SECUNDARIO} mt-6`}>
         {pago ? `Começar com o ${plano.nome}` : "Criar conta grátis"}

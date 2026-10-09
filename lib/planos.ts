@@ -21,13 +21,16 @@ export interface Plano {
   // Gerações de site com IA por mês (etapa 23). Quem confere de verdade
   // são as funções SQL reservar_geracao_site e reservar_ajuste_site.
   sites: number;
+  // Gerador de contratos (etapa 24). Quem confere de verdade é a função
+  // SQL contratos_plano_permitido (etapa24-2-contratos-funcoes.sql).
+  contratos: boolean;
 }
 
 export const PLANOS: Record<PlanoId, Plano> = {
-  gratis: { id: "gratis", nome: "Grátis", preco: 0, desbloqueios: 5, buscas: 3, hospedagem: false, internacional: false, sites: 0 },
-  solo: { id: "solo", nome: "Solo", preco: 34.9, desbloqueios: 50, buscas: 20, hospedagem: false, internacional: false, sites: 0 },
-  pro: { id: "pro", nome: "Pro", preco: 69.9, desbloqueios: 100, buscas: 45, hospedagem: true, internacional: true, sites: 0 },
-  platina: { id: "platina", nome: "Platina", preco: 89.9, desbloqueios: 100, buscas: 45, hospedagem: true, internacional: true, sites: 5 },
+  gratis: { id: "gratis", nome: "Grátis", preco: 0, desbloqueios: 5, buscas: 3, hospedagem: false, internacional: false, sites: 0, contratos: false },
+  solo: { id: "solo", nome: "Solo", preco: 34.9, desbloqueios: 50, buscas: 20, hospedagem: false, internacional: false, sites: 0, contratos: true },
+  pro: { id: "pro", nome: "Pro", preco: 69.9, desbloqueios: 100, buscas: 45, hospedagem: true, internacional: true, sites: 0, contratos: true },
+  platina: { id: "platina", nome: "Platina", preco: 89.9, desbloqueios: 100, buscas: 45, hospedagem: true, internacional: true, sites: 5, contratos: true },
 };
 
 export const PACOTE_EXTRA = { preco: 24.9, desbloqueios: 25, buscas: 15 };
@@ -47,6 +50,11 @@ export function ehPlanoPago(valor: unknown): valor is PlanoPago {
 // Modo Hospedagem e aba Internacional.
 export function temRecursosPro(plano: string): boolean {
   return plano === "pro" || plano === "platina";
+}
+
+// Gerador de contratos: todos os planos pagos.
+export function temContratos(plano: string): boolean {
+  return PLANOS[plano as PlanoId]?.contratos ?? false;
 }
 
 export function nomeDoPlano(id: string): string {

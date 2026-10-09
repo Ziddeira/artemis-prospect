@@ -18,6 +18,8 @@ const NOME_ORIGEM: Record<string, string> = {
   busca: "Busca",
   notificacoes: "Notificações",
   cupons: "Cupons",
+  sites_ia: "Sites IA",
+  contratos: "Contratos",
 };
 
 // Gestão > Erros: falhas das rotinas do servidor (tabela

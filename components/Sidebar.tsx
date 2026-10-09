@@ -13,6 +13,7 @@ import {
   IconePlano,
   IconeRank,
   IconeSair,
+  IconeSite,
   IconeTrofeu,
 } from "@/components/Icones";
 import Avatar from "@/components/Avatar";
@@ -45,11 +46,13 @@ const ITENS: Item[] = [
   { href: "/painel/plano", label: "Meu plano", curto: "Plano", Icone: IconePlano, tour: "plano" },
 ];
 
-// No computador, Rank tem item próprio e "Perfil" fica só aqui: no
-// celular, o atalho do perfil é a foto no topo.
+// No computador, Rank e Sites têm item próprio e "Perfil" fica só aqui:
+// no celular, o atalho do perfil é a foto no topo, e "Meus sites" abre
+// pelo botão no topo de Meus leads.
 const ITENS_LATERAL: Item[] = [
   ITENS[0],
   ITENS[1],
+  { href: "/painel/sites", label: "Meus sites", curto: "Sites", Icone: IconeSite },
   { href: "/painel/score", label: "Score", curto: "Score", Icone: IconeTrofeu, tour: "score" },
   { href: "/painel/rank", label: "Rank do mês", curto: "Rank", Icone: IconeRank },
   ITENS[3],

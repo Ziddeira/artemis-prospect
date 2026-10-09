@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PACOTE_EXTRA, PLANOS, formatarPreco, type Plano } from "@/lib/planos";
+import { PACOTE_EXTRA, PACOTE_SITES, PLANOS, formatarPreco, type Plano } from "@/lib/planos";
 import { nomesPaisesInternacionais } from "@/lib/leads/paises";
 import { DESCRICAO_SITE, NOME_SITE, TITULO_INICIO, URL_SITE, metadadosPagina } from "@/lib/site";
 import type { Situacao } from "@/lib/leads/classificacao";
@@ -160,14 +160,15 @@ export default async function Home() {
               Pague por PIX ou cartão de crédito. Sem fidelidade: cancele quando quiser, direto no
               painel.
             </p>
-            <ul className="mt-10 grid gap-4 md:grid-cols-3">
+            <ul className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {Object.values(PLANOS).map((plano) => (
                 <CartaoPlano key={plano.id} plano={plano} destaque={plano.id === "pro"} />
               ))}
             </ul>
             <p className="mt-6 text-ink-2">
               Precisa de mais no mês? O pacote extra soma +{PACOTE_EXTRA.desbloqueios} desbloqueios e
-              +{PACOTE_EXTRA.buscas} buscas por {formatarPreco(PACOTE_EXTRA.preco)}, sem assinatura.
+              +{PACOTE_EXTRA.buscas} buscas por {formatarPreco(PACOTE_EXTRA.preco)}, sem assinatura. No Platina,
+              o pacote de sites soma +{PACOTE_SITES.sites} gerações por {formatarPreco(PACOTE_SITES.preco)}.
             </p>
           </div>
         </section>
@@ -335,6 +336,7 @@ function CartaoPlano({ plano, destaque }: { plano: Plano; destaque: boolean }) {
         <li>WhatsApp com mensagem pronta</li>
         <li>{plano.hospedagem ? "Modo Hospedagem incluso" : "Sem modo Hospedagem"}</li>
         {plano.internacional && <li>Aba Internacional ({nomesPaisesInternacionais()})</li>}
+        {plano.sites > 0 && <li>{plano.sites} sites gerados com IA por mês, para baixar e hospedar onde quiser</li>}
       </ul>
       <Link href="/cadastro" className={`${destaque ? BOTAO : BOTAO_SECUNDARIO} mt-6`}>
         {pago ? `Começar com o ${plano.nome}` : "Criar conta grátis"}

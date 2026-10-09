@@ -429,3 +429,21 @@ export function IconeGlobo(props: Props) {
     </Base>
   );
 }
+
+export function IconeSite(props: Props) {
+  return (
+    <Base {...props}>
+      <path d="M3 4h18v16H3z" />
+      <path d="M3 9h18M7 6.5h.01M10 6.5h.01" />
+      <path d="M7 13h6M7 16h10" />
+    </Base>
+  );
+}
+
+export function IconeBaixar(props: Props) {
+  return (
+    <Base {...props}>
+      <path d="M12 3v12M7 10l5 5 5-5M4 20h16" />
+    </Base>
+  );
+}

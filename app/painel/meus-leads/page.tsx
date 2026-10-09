@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { cacheValido, type DadosLead } from "@/lib/leads/dadosLead";
 import { situacaoFunilValida, type StatusVenda, type VendaResumo } from "@/lib/leads/funil";
 import type { MarcacaoInvalido, MotivoInvalido, SemDevolucao } from "@/lib/leads/invalido";
-import { EstadoVazio, TituloPagina, BOTAO } from "@/components/ui";
-import { IconeSeta } from "@/components/Icones";
+import { EstadoVazio, TituloPagina, BOTAO, BOTAO_NEUTRO } from "@/components/ui";
+import { IconeSeta, IconeSite } from "@/components/Icones";
 import { lerModelosMensagem } from "@/lib/perfil/modelos";
 import MeusLeadsClient, { type LeadSalvo } from "./MeusLeadsClient";
 
@@ -127,6 +127,9 @@ export default async function MeusLeadsPage() {
   } = await supabase.auth.getUser();
   const { modelos } = await lerModelosMensagem(supabase, user?.id ?? "");
 
+  // Geração de site com IA (plano Platina, etapa 23).
+  const { data: plano } = await supabase.rpc("meu_plano").maybeSingle<{ plano: string }>();
+
   return (
     <div>
       <TituloPagina
@@ -136,7 +139,12 @@ export default async function MeusLeadsPage() {
             ? `${leads.length} ${leads.length === 1 ? "lead" : "leads"}, com contato pronto para chamar. Marque em que pé está cada conversa.`
             : "Os leads que você desbloquear ficam guardados aqui."
         }
-      />
+      >
+        <Link href="/painel/sites" className={BOTAO_NEUTRO}>
+          <IconeSite width={18} height={18} />
+          Meus sites
+        </Link>
+      </TituloPagina>
 
       {leads.length ? (
         <MeusLeadsClient
@@ -147,6 +155,7 @@ export default async function MeusLeadsPage() {
           retornoAtivo={retornoAtivo}
           invalidoAtivo={invalidoAtivo}
           marcacoesIniciais={marcacoes}
+          gerarSite={plano?.plano === "platina"}
         />
       ) : (
         <div className="mt-8">

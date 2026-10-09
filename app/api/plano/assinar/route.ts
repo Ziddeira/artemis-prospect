@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { PLANOS, ehFormaPagamento, ehPlanoPago } from "@/lib/planos";
+import { PLANOS, PLANOS_COM_CUPOM, ehFormaPagamento, ehPlanoPago } from "@/lib/planos";
 import {
   cancelarAssinatura,
   criarAssinatura,
@@ -37,10 +37,13 @@ export async function POST(request: Request) {
     return erro("Corpo da requisição inválido.");
   }
 
-  if (!ehPlanoPago(corpo.plano)) return erro("Escolha o plano Solo ou Pro.");
+  if (!ehPlanoPago(corpo.plano)) return erro("Escolha o plano Solo, Pro ou Platina.");
   if (!ehFormaPagamento(corpo.forma)) return erro("Escolha Pix ou cartão de crédito.");
   const plano = PLANOS[corpo.plano];
   const codigoCupom = typeof corpo.cupom === "string" ? corpo.cupom.trim().slice(0, 40) : "";
+  if (codigoCupom && !PLANOS_COM_CUPOM.includes(plano.id as (typeof PLANOS_COM_CUPOM)[number])) {
+    return erro(`Os cupons ainda não valem para o plano ${plano.nome}.`);
+  }
 
   if (await assinaturaViva(ctx)) {
     return erro("Você já tem uma assinatura. Use \"Trocar de plano\" ou cancele a atual antes.");

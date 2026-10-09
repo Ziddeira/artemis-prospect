@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cronAutorizado } from "@/lib/cron/autorizacao";
 import { registrarErro } from "@/lib/erros/registrar";
 import { faltaEtapa19, voltarPrecoNormal } from "@/lib/pagamentos/cupons";
+import { faltaEtapa23 } from "@/lib/sites/dados";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,8 @@ export const dynamic = "force-dynamic";
 // cupom (etapa 19), uma semana antes da primeira mensalidade cheia. Toda a regra fica nas
 // funções SQL "gerar_notificacoes" (etapa 9), "gerar_notificacoes_retorno"
 // (etapa 10) e "entregar_avisos" (etapa 11), que não repetem aviso já
-// dado; rodar duas vezes no mesmo dia não duplica nada.
+// dado; rodar duas vezes no mesmo dia não duplica nada. De carona, apaga
+// o HTML dos sites gerados com IA há mais de 30 dias (etapa 23).
 export async function GET(request: Request) {
   if (!cronAutorizado(request)) {
     return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
@@ -73,12 +75,23 @@ export async function GET(request: Request) {
     });
   }
 
+  // Sites gerados com IA (etapa 23): apaga o HTML guardado há mais de
+  // 30 dias (política de cache do Google). O registro de custo fica.
+  const sites = await admin.rpc("limpar_sites_expirados");
+  if (sites.error && !faltaEtapa23(sites.error.code)) {
+    console.error("[cron/notificacoes] sites:", sites.error.code, sites.error.message);
+    await registrarErro("sites_ia", `limpar_sites_expirados falhou: ${sites.error.message}`, {
+      codigo: sites.error.code,
+    });
+  }
+
   const geradas = {
     ...(data as object),
     ...(retorno.data as object | null),
     ...(avisos.error ? {} : { avisos: avisos.data }),
     ...(cupons.error ? {} : { fim_cupom: cupons.data }),
     preco_normal: precoNormal,
+    ...(sites.error ? {} : { sites_expirados: sites.data }),
   };
   console.log("[cron/notificacoes] geradas:", JSON.stringify(geradas));
   return NextResponse.json({ geradas });

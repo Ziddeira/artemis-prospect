@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const validoAte = typeof corpo?.validoAte === "string" && DATA.test(corpo.validoAte) ? corpo.validoAte : null;
   const motivo = typeof corpo?.motivo === "string" ? corpo.motivo.trim().slice(0, 500) : "";
 
-  if (!UUID.test(userId) || !["gratis", "solo", "pro"].includes(plano)) {
+  if (!UUID.test(userId) || !["gratis", "solo", "pro", "platina"].includes(plano)) {
     return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 });
   }
   if (!Number.isInteger(creditos) || !Number.isInteger(buscas)) {

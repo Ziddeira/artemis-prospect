@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import type { DadosLead } from "@/lib/leads/dadosLead";
 import {
   MSG_ERRO_FUNIL,
@@ -43,6 +44,7 @@ import {
   IconeEstrela,
   IconeLink,
   IconeMapa,
+  IconeSite,
   IconeTelefone,
   IconeWhatsapp,
 } from "@/components/Icones";
@@ -77,6 +79,7 @@ export default function MeusLeadsClient({
   retornoAtivo = false,
   invalidoAtivo = false,
   marcacoesIniciais = {},
+  gerarSite = false,
 }: {
   leads: LeadSalvo[];
   // Modelos de mensagem do Perfil (leads de fora do Brasil).
@@ -89,6 +92,8 @@ export default function MeusLeadsClient({
   invalidoAtivo?: boolean;
   // Leads já marcados como inválidos, por place_id.
   marcacoesIniciais?: Record<string, MarcacaoInvalido>;
+  // Plano Platina ativo: o botão "Gerar site" aparece sem o convite.
+  gerarSite?: boolean;
 }) {
   const [marcacoes, setMarcacoes] = useState(marcacoesIniciais);
   const [estados, setEstados] = useState<Record<string, Estado>>(() =>
@@ -345,6 +350,13 @@ export default function MeusLeadsClient({
                       )}
                     </>
                   )}
+                  <Link
+                    href={`/painel/sites/novo?lead=${encodeURIComponent(lead.placeId)}`}
+                    className={`${BOTAO_NEUTRO} mt-3 self-start`}
+                  >
+                    <IconeSite width={18} height={18} />
+                    {gerarSite ? "Gerar site" : "Gerar site (Platina)"}
+                  </Link>
                   {invalidoAtivo && (
                     <MarcarInvalido
                       placeId={lead.placeId}

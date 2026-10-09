@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { LeadResultado, Modo, Situacao } from "@/lib/leads/classificacao";
 import { PAISES, PAISES_INTERNACIONAIS, configPais, type CodigoPais } from "@/lib/leads/paises";
 import type { ModelosPorIdioma } from "@/lib/perfil/modelos";
+import { temRecursosPro } from "@/lib/planos";
 import { VALIDADE_CACHE_DIAS } from "@/lib/leads/dadosLead";
 import { dataCurta, quandoFoi, type UltimaBusca } from "@/lib/leads/ultimaBusca";
 import {
@@ -82,11 +83,12 @@ const ROTULO_PLANO: Record<string, string> = {
   gratis: "Grátis",
   solo: "Solo",
   pro: "Pro",
+  platina: "Platina",
 };
 
 const CHECKBOX = "h-5 w-5 shrink-0 cursor-pointer accent-destaque";
 
-// Hospedagem e Internacional são do plano Pro.
+// Hospedagem e Internacional são dos planos Pro e Platina.
 const MODOS: { modo: Modo; rotulo: string; pro: boolean }[] = [
   { modo: "negocios", rotulo: "Negócios", pro: false },
   { modo: "hospedagem", rotulo: "Hospedagem", pro: true },
@@ -143,7 +145,7 @@ export default function BuscaClient({
   const [nicho, setNicho] = useState(ultimaBusca?.termos.join(", ") ?? "");
   const [areas, setAreas] = useState(ultimaBusca?.areas.join(", ") ?? "");
   const [modo, setModo] = useState<Modo>(
-    ultimaBusca && ultimaBusca.modo !== "negocios" && perfilInicial.plano === "pro" ? ultimaBusca.modo : "negocios",
+    ultimaBusca && ultimaBusca.modo !== "negocios" && temRecursosPro(perfilInicial.plano) ? ultimaBusca.modo : "negocios",
   );
   const [pais, setPais] = useState<CodigoPais>(ultimaBusca?.pais ?? PAISES_INTERNACIONAIS[0]);
   const [perfil, setPerfil] = useState(perfilInicial);
@@ -186,7 +188,7 @@ export default function BuscaClient({
   const termos = useMemo(() => dividirLista(nicho), [nicho]);
   const listaAreas = useMemo(() => dividirLista(areas), [areas]);
   const estimativaBuscas = termos.length * listaAreas.length;
-  const podeHospedagem = perfil.plano === "pro";
+  const podeHospedagem = temRecursosPro(perfil.plano);
   const ehInternacional = modo === "internacional";
   // Config do país da busca (Brasil nas abas Negócios e Hospedagem).
   const paisBusca = configPais(ehInternacional ? pais : null);
@@ -266,10 +268,10 @@ export default function BuscaClient({
     if (!termos.length) return setErro("Digite ao menos um nicho.");
     if (!listaAreas.length) return setErro("Digite ao menos uma região.");
     if (modo === "hospedagem" && !podeHospedagem) {
-      return setErro("O modo Hospedagem é exclusivo do plano Pro.");
+      return setErro("O modo Hospedagem é dos planos Pro e Platina.");
     }
     if (ehInternacional && !podeHospedagem) {
-      return setErro("A aba Internacional é exclusiva do plano Pro.");
+      return setErro("A aba Internacional é dos planos Pro e Platina.");
     }
     if (estimativaBuscas > perfil.buscasRestantes) {
       return setErro(
@@ -389,7 +391,7 @@ export default function BuscaClient({
     <div>
       <TituloPagina
         titulo="Buscar leads"
-        descricao="Busca no Google Maps e separa quem não tem site, quem depende de Airbnb/Booking e quem só usa app ou rede social. No plano Pro, também em outros países."
+        descricao="Busca no Google Maps e separa quem não tem site, quem depende de Airbnb/Booking e quem só usa app ou rede social. Nos planos Pro e Platina, também em outros países."
       />
 
       {/* data-tour: partes destacadas pelo tour da Ártemis
@@ -417,7 +419,7 @@ export default function BuscaClient({
                 onClick={() => alternarModo(m.modo)}
                 disabled={bloqueado}
                 aria-pressed={modo === m.modo}
-                title={bloqueado ? "Disponível no plano Pro" : undefined}
+                title={bloqueado ? "Disponível nos planos Pro e Platina" : undefined}
                 className={`inline-flex min-h-11 items-center justify-center gap-1.5 px-2 font-display text-[13px] font-semibold uppercase tracking-[0.06em] transition sm:px-5 sm:text-sm sm:tracking-[0.08em] ${
                   modo === m.modo ? ABA_ATIVA : ABA_INATIVA
                 } ${bloqueado ? "cursor-not-allowed opacity-60" : ""}`}
@@ -426,7 +428,7 @@ export default function BuscaClient({
                 {bloqueado && (
                   <>
                     <IconeCadeado width={14} height={14} />
-                    <span className="sr-only">(exclusivo do plano Pro)</span>
+                    <span className="sr-only">(dos planos Pro e Platina)</span>
                   </>
                 )}
               </button>

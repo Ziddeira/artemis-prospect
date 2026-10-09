@@ -65,4 +65,4 @@ export function inteiro(n: number) {
   return n.toLocaleString("pt-BR");
 }
 
-export const NOME_PLANO: Record<string, string> = { gratis: "Grátis", solo: "Solo", pro: "Pro" };
+export const NOME_PLANO: Record<string, string> = { gratis: "Grátis", solo: "Solo", pro: "Pro", platina: "Platina" };

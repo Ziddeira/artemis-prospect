@@ -33,6 +33,13 @@ export default async function PlanoPage() {
     .select("creditos_premio")
     .maybeSingle<{ creditos_premio: number }>();
 
+  // Gerações de site com IA (etapa 23). Sem o script, a consulta falha e
+  // a tela segue sem elas.
+  const { data: sites } = await supabase
+    .from("profiles")
+    .select("sites_restantes, sites_extras")
+    .maybeSingle<{ sites_restantes: number; sites_extras: number }>();
+
   // A assinatura mais recente (viva ou a última cancelada).
   const { data: assinatura } = await supabase
     .from("assinaturas")
@@ -62,6 +69,8 @@ export default async function PlanoPage() {
         validoAte: perfil?.plano_valido_ate ?? null,
         temClienteAsaas: perfil?.tem_cliente_asaas ?? false,
         creditosPremio: premio?.creditos_premio ?? 0,
+        sitesRestantes: sites?.sites_restantes ?? 0,
+        sitesExtras: sites?.sites_extras ?? 0,
       }}
       assinatura={
         assinatura

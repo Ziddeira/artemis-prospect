@@ -4,9 +4,11 @@ import { cacheValido, type DadosLead } from "@/lib/leads/dadosLead";
 import { situacaoFunilValida, type StatusVenda, type VendaResumo } from "@/lib/leads/funil";
 import type { MarcacaoInvalido, MotivoInvalido, SemDevolucao } from "@/lib/leads/invalido";
 import { EstadoVazio, TituloPagina, BOTAO, BOTAO_NEUTRO } from "@/components/ui";
-import { IconeSeta, IconeSite } from "@/components/Icones";
+import { IconeContrato, IconeSeta, IconeSite } from "@/components/Icones";
 import { lerModelosMensagem } from "@/lib/perfil/modelos";
-import MeusLeadsClient, { type LeadSalvo } from "./MeusLeadsClient";
+import { temContratos } from "@/lib/planos";
+import type { StatusContrato } from "@/lib/contratos/dados";
+import MeusLeadsClient, { type ContratoDoLead, type LeadSalvo } from "./MeusLeadsClient";
 
 export const dynamic = "force-dynamic";
 
@@ -130,6 +132,20 @@ export default async function MeusLeadsPage() {
   // Geração de site com IA (plano Platina, etapa 23).
   const { data: plano } = await supabase.rpc("meu_plano").maybeSingle<{ plano: string }>();
 
+  // Contratos já feitos para cada lead (etapa 24). Sem o SQL da etapa 24,
+  // o botão "Gerar contrato" não aparece.
+  const contratos = await supabase
+    .from("contratos")
+    .select("id, place_id, status")
+    .order("criado_em", { ascending: false })
+    .returns<{ id: string; place_id: string; status: StatusContrato }[]>();
+  const contratoAtivo = !contratos.error;
+  const contratosPorLead: Record<string, ContratoDoLead> = {};
+  for (const c of contratos.data ?? []) {
+    // O mais recente de cada lead (a lista vem do mais novo ao mais antigo).
+    contratosPorLead[c.place_id] ??= { id: c.id, status: c.status };
+  }
+
   return (
     <div>
       <TituloPagina
@@ -140,10 +156,16 @@ export default async function MeusLeadsPage() {
             : "Os leads que você desbloquear ficam guardados aqui."
         }
       >
-        <Link href="/painel/sites" className={BOTAO_NEUTRO}>
-          <IconeSite width={18} height={18} />
-          Meus sites
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/painel/sites" className={BOTAO_NEUTRO}>
+            <IconeSite width={18} height={18} />
+            Meus sites
+          </Link>
+          <Link href="/painel/contratos" className={BOTAO_NEUTRO}>
+            <IconeContrato width={18} height={18} />
+            Contratos
+          </Link>
+        </div>
       </TituloPagina>
 
       {leads.length ? (
@@ -156,6 +178,9 @@ export default async function MeusLeadsPage() {
           invalidoAtivo={invalidoAtivo}
           marcacoesIniciais={marcacoes}
           gerarSite={plano?.plano === "platina"}
+          contratoAtivo={contratoAtivo}
+          contratoLiberado={temContratos(plano?.plano ?? "gratis")}
+          contratosPorLead={contratosPorLead}
         />
       ) : (
         <div className="mt-8">

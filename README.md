@@ -251,6 +251,47 @@ cada um no SQL Editor do Supabase:
     devolvido se a IA falhar. Os cupons continuam valendo só para Solo e
     Pro. Veja "Geração de site com IA" abaixo.
 
+24. Etapa 24, em **duas partes, nesta ordem**:
+    `supabase/etapa24-1-contratos-base.sql` e
+    `supabase/etapa24-2-contratos-funcoes.sql` — gerador de contrato de
+    criação de site (planos Solo, Pro e Platina). Cria a tabela
+    `contratos` (cada usuário só lê os próprios, pelo RLS, sem exceção
+    para administrador; escrita só pelas funções), as colunas
+    `profiles.assinatura_path` e `profiles.contratos_seq`, o bucket
+    **privado** `contratos` no Storage (PDF e PNG, até 5 MB; o usuário só
+    lê e apaga a própria pasta, quem grava é o servidor) e o aviso do sino
+    do tipo `contrato`. Precisa da `SUPABASE_SERVICE_ROLE_KEY`. Veja
+    "Gerador de contratos" abaixo.
+
+### Gerador de contratos (Solo, Pro e Platina)
+
+Em "Meus leads", o lead "Em negociação" ou "Fechado" ganha o botão
+"Gerar contrato"; a aba "Contratos" lista todos, com a situação
+(rascunho, enviado, assinado).
+
+- **Dois caminhos:** modelo padrão (a pessoa preenche só as partes, o
+  valor e o foro) ou questionário de 8 passos, um por tela. O nome do
+  lead e os dados do prestador (do último contrato) já vêm preenchidos.
+  O texto das cláusulas fica em `lib/contratos/texto.ts`.
+- **PDF:** gerado no servidor com `pdf-lib` (`lib/contratos/pdf.ts`),
+  com cláusulas numeradas e os campos de assinatura das duas partes.
+  O rascunho sai com a marca "RASCUNHO".
+- **Envio:** o prestador assina (desenhando, enviando imagem ou usando a
+  assinatura salva no Perfil). O PDF é guardado no Storage, o hash
+  SHA-256 é gravado, o texto fica congelado e nasce um link público
+  (`/contrato/<código>`, 256 bits aleatórios, válido por 30 dias, fora do
+  Google). Para mudar algo depois, "Cancelar envio e editar" desativa o
+  link.
+- **Assinatura do cliente:** pelo link, sem conta. O servidor registra
+  data e hora (do banco), IP, navegador, nome e e-mail informados, confere
+  que o PDF não mudou (hash) e monta o PDF final com a página
+  "Registro de assinatura". O dono recebe um aviso no sino.
+- **LGPD:** "Apagar contrato definitivamente" apaga os arquivos do
+  Storage e depois a linha do banco (e o aviso do sino). Funciona em
+  qualquer plano.
+- **Planos:** para mudar quem tem acesso, edite a função SQL
+  `contratos_plano_permitido` e o campo `contratos` em `lib/planos.ts`.
+
 ### Geração de site com IA (plano Platina)
 
 Em "Meus leads", cada lead tem o botão "Gerar site". Um formulário curto

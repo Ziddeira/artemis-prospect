@@ -7,7 +7,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 //
 // Nunca derruba quem chamou: se a gravação falhar (ex.: script da etapa
 // 11 ainda não rodado), só escreve no log da Vercel, como antes.
-export type OrigemErro = "webhook_asaas" | "verificar_vendas" | "busca" | "notificacoes" | "cupons" | "sites_ia";
+export type OrigemErro =
+  | "webhook_asaas"
+  | "verificar_vendas"
+  | "busca"
+  | "notificacoes"
+  | "cupons"
+  | "sites_ia"
+  | "contratos";
 
 export async function registrarErro(
   origem: OrigemErro,

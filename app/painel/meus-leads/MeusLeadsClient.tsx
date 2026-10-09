@@ -38,9 +38,11 @@ import MarcarInvalido from "@/components/leads/MarcarInvalido";
 import type { MarcacaoInvalido } from "@/lib/leads/invalido";
 import { MSG_FALTA_ETAPA10, statusRetorno, type RetornoLead as Retorno } from "@/lib/leads/retorno";
 import { ALERTA_AVISO, BOTAO_NEUTRO, BOTAO_WHATSAPP, CAMPO, CARTAO } from "@/components/ui";
+import { ROTULO_STATUS, SITUACOES_CONTRATO, type StatusContrato } from "@/lib/contratos/dados";
 import {
   IconeAtualizar,
   IconeBuscar,
+  IconeContrato,
   IconeEstrela,
   IconeLink,
   IconeMapa,
@@ -48,6 +50,12 @@ import {
   IconeTelefone,
   IconeWhatsapp,
 } from "@/components/Icones";
+
+// Contrato mais recente de um lead (etapa 24).
+export interface ContratoDoLead {
+  id: string;
+  status: StatusContrato;
+}
 
 export interface LeadSalvo {
   placeId: string;
@@ -80,6 +88,9 @@ export default function MeusLeadsClient({
   invalidoAtivo = false,
   marcacoesIniciais = {},
   gerarSite = false,
+  contratoAtivo = false,
+  contratoLiberado = false,
+  contratosPorLead = {},
 }: {
   leads: LeadSalvo[];
   // Modelos de mensagem do Perfil (leads de fora do Brasil).
@@ -94,6 +105,11 @@ export default function MeusLeadsClient({
   marcacoesIniciais?: Record<string, MarcacaoInvalido>;
   // Plano Platina ativo: o botão "Gerar site" aparece sem o convite.
   gerarSite?: boolean;
+  // false = a etapa 24 ainda não foi rodada no Supabase.
+  contratoAtivo?: boolean;
+  // Plano com o gerador de contratos (Solo, Pro e Platina).
+  contratoLiberado?: boolean;
+  contratosPorLead?: Record<string, ContratoDoLead>;
 }) {
   const [marcacoes, setMarcacoes] = useState(marcacoesIniciais);
   const [estados, setEstados] = useState<Record<string, Estado>>(() =>
@@ -350,13 +366,31 @@ export default function MeusLeadsClient({
                       )}
                     </>
                   )}
-                  <Link
-                    href={`/painel/sites/novo?lead=${encodeURIComponent(lead.placeId)}`}
-                    className={`${BOTAO_NEUTRO} mt-3 self-start`}
-                  >
-                    <IconeSite width={18} height={18} />
-                    {gerarSite ? "Gerar site" : "Gerar site (Platina)"}
-                  </Link>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link
+                      href={`/painel/sites/novo?lead=${encodeURIComponent(lead.placeId)}`}
+                      className={BOTAO_NEUTRO}
+                    >
+                      <IconeSite width={18} height={18} />
+                      {gerarSite ? "Gerar site" : "Gerar site (Platina)"}
+                    </Link>
+                    {/* Contrato: só para lead em negociação ou fechado. */}
+                    {contratoAtivo &&
+                      (SITUACOES_CONTRATO as readonly string[]).includes(funis[lead.placeId]?.situacao ?? "") && (
+                        <Link
+                          href={`/painel/contratos/novo?lead=${encodeURIComponent(lead.placeId)}`}
+                          className={BOTAO_NEUTRO}
+                        >
+                          <IconeContrato width={18} height={18} />
+                          {contratoLiberado ? "Gerar contrato" : "Gerar contrato (planos pagos)"}
+                        </Link>
+                      )}
+                    {contratosPorLead[lead.placeId] && (
+                      <Link href={`/painel/contratos/${contratosPorLead[lead.placeId].id}`} className={BOTAO_NEUTRO}>
+                        Ver contrato ({ROTULO_STATUS[contratosPorLead[lead.placeId].status].toLowerCase()})
+                      </Link>
+                    )}
+                  </div>
                   {invalidoAtivo && (
                     <MarcarInvalido
                       placeId={lead.placeId}

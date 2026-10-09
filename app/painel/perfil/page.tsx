@@ -54,6 +54,14 @@ export default async function PerfilPage({
 
   const { modelos, ativo: modelosAtivos } = await lerModelosMensagem(supabase, user.id);
 
+  // Assinatura dos contratos (etapa 24). Sem o script, a coluna não
+  // existe (null): o cartão avisa em vez de quebrar a página.
+  const { data: assinatura, error: erroAssinatura } = await supabase
+    .from("profiles")
+    .select("assinatura_path")
+    .eq("id", user.id)
+    .maybeSingle<{ assinatura_path: string | null }>();
+
   return (
     <PerfilClient
       userId={user.id}
@@ -69,6 +77,7 @@ export default async function PerfilPage({
       modelosIngles={modelos.en}
       modelosPortugues={modelos.pt}
       modelosAtivos={modelosAtivos}
+      assinaturaSalva={erroAssinatura ? null : !!assinatura?.assinatura_path}
     />
   );
 }

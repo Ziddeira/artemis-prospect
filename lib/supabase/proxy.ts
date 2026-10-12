@@ -72,7 +72,10 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  if (user && isAuthPage) {
+  // A página de vendas (/) é estática, para abrir rápido; quem já está
+  // logado é mandado ao painel aqui, sem a página precisar consultar a
+  // sessão.
+  if (user && (isAuthPage || path === "/")) {
     const url = request.nextUrl.clone();
     url.pathname = "/painel/buscar";
     return NextResponse.redirect(url);

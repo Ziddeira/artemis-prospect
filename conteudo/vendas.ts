@@ -42,7 +42,7 @@ export const TOPO = {
   observacao: `Sem cartão: ${PLANOS.gratis.buscas} buscas e ${PLANOS.gratis.desbloqueios} desbloqueios para testar.`,
   // Texto alternativo da imagem (lido por leitores de tela e pelo Google).
   textoImagem:
-    "Tela de busca do Ártemis Prospect com leads de Palhoça SC: uma barbearia sem site e uma pousada que depende do Booking, cada uma com pontuação e botão de WhatsApp.",
+    "Resultado de uma busca no Ártemis Prospect: uma barbearia sem site e uma pousada que depende do Booking, já desbloqueadas e com botão de WhatsApp, e um estúdio que só usa Instagram, ainda bloqueado.",
 };
 
 // ----------------------------------------------------------------------------

@@ -145,11 +145,12 @@ export default function Home() {
             <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
               {COMO_FUNCIONA.passos.map((passo, i) => (
                 <li key={passo.titulo} className="flex flex-col">
-                  <div className="flex aspect-[390/424] items-center overflow-hidden border border-line bg-[var(--ap-black)]">
+                  <div className="overflow-hidden border border-line">
                     <Image
                       src={IMAGENS_PASSOS[i]}
                       alt={passo.textoImagem}
                       sizes="(min-width: 1152px) 360px, (min-width: 768px) 30vw, 92vw"
+                      quality={90}
                       className="h-auto w-full"
                     />
                   </div>

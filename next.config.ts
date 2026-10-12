@@ -69,6 +69,9 @@ const CABECALHOS_SEGURANCA = [
 ];
 
 const nextConfig: NextConfig = {
+  // 75 é o padrão do Next. 90 fica para os prints da ferramenta na página
+  // de vendas: com menos, a letra pequena da tela borra.
+  images: { qualities: [75, 90] },
   async headers() {
     return [
       { source: "/:caminho*", headers: CABECALHOS_SEGURANCA },

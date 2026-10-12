@@ -21,7 +21,6 @@ import Mira from "@/components/marca/Mira";
 import Rodape from "@/components/Rodape";
 import SeletorTema from "@/components/tema/SeletorTema";
 import ImagemTopo from "@/components/vendas/ImagemTopo";
-import Prova, { TEM_PROVA } from "@/components/vendas/Prova";
 import { IconeSeta } from "@/components/Icones";
 import passoBuscar from "@/public/vendas/passo-buscar.png";
 import passoDesbloquear from "@/public/vendas/passo-desbloquear.png";
@@ -45,7 +44,6 @@ export default function Home() {
   const secoes = [
     { id: "como-funciona", rotulo: "Como funciona" },
     { id: "o-que-acha", rotulo: "O que acha" },
-    ...(TEM_PROVA ? [{ id: "prova", rotulo: "Resultados" }] : []),
     { id: "planos", rotulo: "Planos" },
     { id: "perguntas", rotulo: "Dúvidas" },
   ];
@@ -220,10 +218,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 5. Prova (conteudo/vendas.ts, seção PROVA) ---------------------- */}
-        <Prova id="prova" />
-
-        {/* 6. Planos -------------------------------------------------------- */}
+        {/* 5. Planos -------------------------------------------------------- */}
         <section id="planos" aria-labelledby="planos-titulo" className="px-seguro scroll-mt-4 border-t border-line sm:px-6">
           <div className="mx-auto max-w-6xl py-16 sm:py-20">
             <p className={ROTULO_SECAO}>{PLANOS_TEXTO.rotulo}</p>
@@ -244,7 +239,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 7. Perguntas frequentes ----------------------------------------- */}
+        {/* 6. Perguntas frequentes ----------------------------------------- */}
         <section
           id="perguntas"
           aria-labelledby="perguntas-titulo"
@@ -295,7 +290,7 @@ export default function Home() {
         </section>
       </main>
 
-      {/* 8. Rodapé: privacidade, termos e contato. */}
+      {/* 7. Rodapé: privacidade, termos e contato. */}
       <Rodape />
     </div>
   );

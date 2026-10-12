@@ -12,11 +12,6 @@
 //   * cada item de lista termina com vírgula;
 //   * preços e limites dos planos NÃO ficam aqui: vêm de lib/planos.ts
 //     (os mesmos números que o banco usa).
-//
-// A seção de PROVA (número, prints e depoimentos) fica no fim deste
-// arquivo e começa vazia. Enquanto estiver vazia, a seção some do site
-// oficial; no seu computador e nas prévias da Vercel aparecem caixas
-// tracejadas mostrando onde cada coisa vai entrar.
 // ============================================================================
 
 import { PLANOS } from "@/lib/planos";
@@ -158,7 +153,7 @@ export const CATEGORIAS = {
 } as const;
 
 // ----------------------------------------------------------------------------
-// 6. Planos
+// 5. Planos
 // Preços e limites vêm de lib/planos.ts. Aqui só a frase de "para quem é"
 // de cada plano e o selo do plano em destaque.
 // ----------------------------------------------------------------------------
@@ -177,7 +172,7 @@ export const PLANOS_TEXTO = {
 } as const;
 
 // ----------------------------------------------------------------------------
-// 7. Perguntas frequentes
+// 6. Perguntas frequentes
 // Também vão para o Google como "perguntas e respostas" (dados
 // estruturados), por isso a resposta é só texto, sem links.
 // ----------------------------------------------------------------------------
@@ -228,71 +223,4 @@ export const CHAMADA_FINAL = {
   titulo: "Seu próximo cliente ainda não tem site.",
   texto: "Crie a conta em um minuto e faça a primeira busca agora.",
   botao: "Criar conta grátis",
-};
-
-// ============================================================================
-// 5. PROVA — preencha com os seus dados reais
-// ============================================================================
-//
-// Tudo aqui começa vazio. Cada parte aparece no site assim que tiver
-// conteúdo; com tudo vazio, a seção inteira some do site oficial.
-//
-// NÚMERO EM DESTAQUE
-//   Troque "null" por um objeto assim:
-//     numero: { valor: "1.240", texto: "negócios sem site encontrados no último mês" },
-//
-// PRINTS (conversas, vendas fechadas, resultados)
-//   1. Coloque a imagem em public/vendas/provas/ (PNG, JPG ou WEBP).
-//      Borre nomes e telefones de terceiros antes de publicar.
-//   2. Adicione um item na lista "prints":
-//     {
-//       arquivo: "/vendas/provas/conversa-barbearia.png",
-//       formato: "celular",           // "celular" (em pé) ou "computador" (deitado)
-//       legenda: "Primeira resposta 20 minutos depois da mensagem",
-//     },
-//
-// DEPOIMENTOS
-//   Adicione um item na lista "depoimentos". A foto é opcional: se
-//   tiver, coloque em public/vendas/provas/ e informe o caminho; se não,
-//   apague a linha "foto" e aparecem as iniciais.
-//     {
-//       texto: "Fechei dois sites na primeira semana.",
-//       nome: "Fulana de Tal",
-//       detalhe: "Web designer em Florianópolis",
-//       foto: "/vendas/provas/fulana.jpg",
-//     },
-//
-// Use só depoimentos e números reais, com autorização de quem aparece.
-// ============================================================================
-
-export interface NumeroDestaque {
-  valor: string;
-  texto: string;
-}
-
-export interface PrintProva {
-  arquivo: string;
-  formato: "celular" | "computador";
-  legenda: string;
-}
-
-export interface Depoimento {
-  texto: string;
-  nome: string;
-  detalhe: string;
-  foto?: string;
-}
-
-export const PROVA: {
-  rotulo: string;
-  titulo: string;
-  numero: NumeroDestaque | null;
-  prints: PrintProva[];
-  depoimentos: Depoimento[];
-} = {
-  rotulo: "Na prática",
-  titulo: "Resultados de quem já usa",
-  numero: null,
-  prints: [],
-  depoimentos: [],
 };

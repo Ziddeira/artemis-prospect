@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { lerPerfil } from "@/lib/perfil/dados";
 import { lerModelosMensagem } from "@/lib/perfil/modelos";
-import PerfilClient from "./PerfilClient";
+import { idDoAparelho } from "@/lib/seguranca/acessos";
+import PerfilClient, { type Acesso } from "./PerfilClient";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,17 @@ export default async function PerfilPage({
     .eq("id", user.id)
     .maybeSingle<{ assinatura_path: string | null }>();
 
+  // Últimos logins (etapa 25). Sem o script, a tabela não existe (null):
+  // o cartão avisa em vez de quebrar a página.
+  const { data: acessos, error: erroAcessos } = await supabase
+    .from("acessos")
+    .select("id, criado_em, metodo, aparelho_id, aparelho, ip, local")
+    .eq("user_id", user.id)
+    .order("criado_em", { ascending: false })
+    .limit(5)
+    .returns<Acesso[]>();
+  const aparelhoAtual = await idDoAparelho();
+
   return (
     <PerfilClient
       userId={user.id}
@@ -78,6 +90,8 @@ export default async function PerfilPage({
       modelosPortugues={modelos.pt}
       modelosAtivos={modelosAtivos}
       assinaturaSalva={erroAssinatura ? null : !!assinatura?.assinatura_path}
+      acessos={erroAcessos ? null : (acessos ?? [])}
+      aparelhoAtual={aparelhoAtual}
     />
   );
 }

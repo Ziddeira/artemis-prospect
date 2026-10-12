@@ -22,7 +22,7 @@ export default async function RedefinirSenhaPage() {
       descricao={user?.email ? <>Conta: {user.email}</> : "Link de recuperação de senha."}
     >
       {user ? (
-        <FormRedefinirSenha />
+        <FormRedefinirSenha email={user.email} />
       ) : (
         <>
           <p role="alert" className={`${ALERTA_ERRO} mt-6`}>

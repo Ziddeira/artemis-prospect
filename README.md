@@ -280,6 +280,39 @@ cada um no SQL Editor do Supabase:
     sino do tipo `seguranca` (login num aparelho novo). Só o servidor
     (service_role) chama as funções. Veja "Segurança do login" abaixo.
 
+26. `supabase/etapa26-dominios.sql` — aba Domínios. Cria a tabela
+    `registradores_links` (link do botão "Registrar" de cada extensão,
+    editável em Gestão > Registradores pela função
+    `admin_salvar_registrador`), a tabela `dominios_buscas` e a função
+    `dominios_contar_busca` (6 buscas por minuto por usuário) e a tabela
+    `dominios_cache` com a função `dominios_cache_gravar` (resultado de
+    cada consulta guardado por 10 minutos; só o servidor usa, precisa da
+    `SUPABASE_SERVICE_ROLE_KEY` — sem ela, o cache fica só na memória do
+    servidor). Veja "Domínios" abaixo.
+
+### Domínios
+
+A aba "Domínios" confere se um nome está livre em .com.br, .com, .net,
+.app, .site e .online ao mesmo tempo.
+
+- **Consulta:** por RDAP, só no servidor (`lib/dominios/rdap.ts`). O
+  .com.br vai ao `rdap.registro.br`; os demais, ao serviço que a lista
+  oficial da IANA indica (com uma lista de reserva no código). 404 =
+  disponível; 200 = ocupado, com a data de expiração quando vier.
+- **Cuidados:** no máximo 2 consultas simultâneas ao Registro.br (4 nos
+  outros), pausa automática quando um serviço responde 429 (respeitando o
+  `Retry-After`), resultado guardado por 10 minutos e limite de 6 buscas
+  por minuto por usuário.
+- **Sugestões:** se o nome exato estiver ocupado no .com.br ou no .com,
+  até 5 variações (com a cidade, "oficial", "meu...", com hífens...) são
+  conferidas nessas duas extensões.
+- **Registrar:** o botão abre o site do registrador em nova aba. Os links
+  ficam em Gestão > Registradores (aceita link de afiliado, com os
+  marcadores `{dominio}`, `{nome}` e `{extensao}`). O Ártemis não vende
+  domínio; a tela deixa isso claro.
+- **Atalho no lead:** "Buscar domínio para esta empresa", em Meus leads e
+  no lead desbloqueado da busca, abre a aba já com o nome e a cidade.
+
 ### Gerador de contratos (Solo, Pro e Platina)
 
 Em "Meus leads", o lead "Em negociação" ou "Fechado" ganha o botão

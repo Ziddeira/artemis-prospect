@@ -8,6 +8,7 @@ import type { ModelosPorIdioma } from "@/lib/perfil/modelos";
 import { temRecursosPro } from "@/lib/planos";
 import { VALIDADE_CACHE_DIAS } from "@/lib/leads/dadosLead";
 import { dataCurta, quandoFoi, type UltimaBusca } from "@/lib/leads/ultimaBusca";
+import { linkBuscaDominio } from "@/lib/dominios/regras";
 import {
   MSG_PADRAO_HOSPEDAGEM,
   MSG_PADRAO_NEGOCIOS,
@@ -986,6 +987,15 @@ function LeadCard({
       {lead.contato && internacional && (
         <div className="border-t border-line pt-3">
           <MensagemPronta pais={lead.pais} nome={lead.nome} modelosPorIdioma={modelos} brasileiro={brasileiro} />
+        </div>
+      )}
+
+      {lead.contato && (
+        <div className="border-t border-line pt-3">
+          <Link href={linkBuscaDominio(lead.nome, lead.bairro || lead.area)} className={BOTAO_NEUTRO}>
+            <IconeGlobo width={18} height={18} />
+            Buscar domínio para esta empresa
+          </Link>
         </div>
       )}
     </article>

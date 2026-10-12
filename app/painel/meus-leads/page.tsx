@@ -4,7 +4,7 @@ import { cacheValido, type DadosLead } from "@/lib/leads/dadosLead";
 import { situacaoFunilValida, type StatusVenda, type VendaResumo } from "@/lib/leads/funil";
 import type { MarcacaoInvalido, MotivoInvalido, SemDevolucao } from "@/lib/leads/invalido";
 import { EstadoVazio, TituloPagina, BOTAO, BOTAO_NEUTRO } from "@/components/ui";
-import { IconeContrato, IconeSeta, IconeSite } from "@/components/Icones";
+import { IconeContrato, IconeGlobo, IconeSeta, IconeSite } from "@/components/Icones";
 import { lerModelosMensagem } from "@/lib/perfil/modelos";
 import { temContratos } from "@/lib/planos";
 import type { StatusContrato } from "@/lib/contratos/dados";
@@ -164,6 +164,10 @@ export default async function MeusLeadsPage() {
           <Link href="/painel/contratos" className={BOTAO_NEUTRO}>
             <IconeContrato width={18} height={18} />
             Contratos
+          </Link>
+          <Link href="/painel/dominios" className={BOTAO_NEUTRO}>
+            <IconeGlobo width={18} height={18} />
+            Domínios
           </Link>
         </div>
       </TituloPagina>

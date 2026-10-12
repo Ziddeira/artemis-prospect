@@ -137,8 +137,9 @@ export default function PrivacidadePage() {
             (nome, ramo, cidade, serviços, WhatsApp, estilo) e o site gerado.
           </li>
           <li>
-            <strong>Dados técnicos:</strong> registros de acesso (IP, data e hora), registros de
-            erro do servidor e os cookies descritos mais abaixo.
+            <strong>Dados técnicos:</strong> registros de acesso (IP, data e hora, cidade aproximada
+            e o aparelho e navegador usados no login), registros de erro do servidor e os cookies
+            descritos mais abaixo. Você vê os seus últimos acessos no Perfil.
           </li>
         </ul>
       </Secao>
@@ -190,6 +191,11 @@ export default function PrivacidadePage() {
           <li>
             <strong>Vercel:</strong> hospedagem do site e das rotinas automáticas. Recebe os dados de
             acesso de cada visita (como IP e navegador).
+          </li>
+          <li>
+            <strong>Cloudflare:</strong> verificação anti-robô (Turnstile) na criação de conta.
+            Recebe dados técnicos do navegador, como IP, para confirmar que quem se cadastra é uma
+            pessoa.
           </li>
           <li>
             <strong>Asaas:</strong> processamento dos pagamentos por PIX e cartão. Recebe nome, CPF ou
@@ -271,8 +277,9 @@ export default function PrivacidadePage() {
 
       <Secao id="cookies">
         <p>
-          Usamos só <strong>cookies necessários</strong>: os do login, que mantêm você conectado, e o
-          que guarda o tema escolhido (claro, escuro ou do sistema). Não usamos cookies de
+          Usamos só <strong>cookies necessários</strong>: os do login, que mantêm você conectado, o
+          que identifica o aparelho para avisar você de logins em aparelhos novos e o que guarda o
+          tema escolhido (claro, escuro ou do sistema). Não usamos cookies de
           publicidade nem de rastreamento de terceiros.
         </p>
       </Secao>

@@ -8,6 +8,8 @@ import SeletorTema from "@/components/tema/SeletorTema";
 import PadAssinatura from "@/components/contratos/PadAssinatura";
 import { IconeGoogle } from "@/components/BotaoGoogle";
 import { IconeCadeado } from "@/components/Icones";
+import CampoSenha from "@/components/CampoSenha";
+import ForcaSenha from "@/components/ForcaSenha";
 import { Alerta, chamar, type Mensagem } from "@/components/perfil/comum";
 import {
   ALERTA_AVISO,
@@ -28,9 +30,9 @@ import {
   type IdiomaModelo,
   type ModelosMensagem,
 } from "@/lib/leads/mensagens";
+import { SENHA_MAX, SENHA_MIN, avaliarSenha } from "@/lib/seguranca/senha";
 import {
   APELIDO_MAX,
-  SENHA_MIN,
   mascararTelefone,
   situacaoTelefone,
   soDigitos,
@@ -55,6 +57,8 @@ export default function PerfilClient({
   modelosPortugues,
   modelosAtivos,
   assinaturaSalva,
+  acessos,
+  aparelhoAtual,
 }: {
   userId: string;
   email: string;
@@ -73,6 +77,10 @@ export default function PerfilClient({
   modelosAtivos: boolean;
   // Assinatura dos contratos. null = etapa 24 ainda não rodada no banco.
   assinaturaSalva: boolean | null;
+  // Últimos logins. null = etapa 25 ainda não rodada no banco.
+  acessos: Acesso[] | null;
+  // Código deste navegador (cookie), para marcar "este aparelho".
+  aparelhoAtual: string | null;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -103,10 +111,11 @@ export default function PerfilClient({
         </div>
         <div className="flex flex-col gap-6">
           <CartaoAcesso acesso={acesso} />
+          <CartaoSeguranca acessos={acessos} aparelhoAtual={aparelhoAtual} />
           <CartaoEmail email={email} emailPendente={emailPendente} aviso={avisoEmail} />
           <CartaoAparencia />
           {/* Quem entra só pelo Google não tem senha para trocar. */}
-          {acesso.senha && <CartaoSenha />}
+          {acesso.senha && <CartaoSenha email={email} />}
           <CartaoTour />
         </div>
       </div>
@@ -655,6 +664,114 @@ function CartaoAcesso({ acesso }: { acesso: FormasDeEntrar }) {
   );
 }
 
+// Acessos recentes e sessões ---------------------------------------------
+export interface Acesso {
+  id: number;
+  criado_em: string;
+  metodo: "senha" | "google" | "link" | "cadastro";
+  aparelho_id: string | null;
+  aparelho: string | null;
+  ip: string | null;
+  local: string | null;
+}
+
+const COMO_ENTROU: Record<Acesso["metodo"], string> = {
+  senha: "com e-mail e senha",
+  google: "pelo Google",
+  link: "pelo link do e-mail",
+  cadastro: "ao criar a conta",
+};
+
+const DATA_HORA = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "America/Sao_Paulo",
+});
+
+function CartaoSeguranca({ acessos, aparelhoAtual }: { acessos: Acesso[] | null; aparelhoAtual: string | null }) {
+  const [encerrando, setEncerrando] = useState(false);
+  const [mensagem, setMensagem] = useState<Mensagem>(null);
+
+  async function encerrarOutras() {
+    if (
+      !window.confirm(
+        "Encerrar a sessão em todos os outros aparelhos e navegadores? Eles vão precisar entrar de novo. Este aparelho continua conectado.",
+      )
+    ) {
+      return;
+    }
+    setMensagem(null);
+    setEncerrando(true);
+    const erro = await chamar("/api/perfil/sessoes", "POST");
+    setEncerrando(false);
+    setMensagem(
+      erro
+        ? { tipo: "erro", texto: erro }
+        : { tipo: "ok", texto: "Pronto: as outras sessões foram encerradas. Só este aparelho continua conectado." },
+    );
+  }
+
+  return (
+    <section id="acessos" aria-labelledby="titulo-acessos" className={CARTAO}>
+      <h2 id="titulo-acessos" className={TITULO_CARTAO}>
+        Acessos recentes
+      </h2>
+      <p className="mt-1 mb-4 text-sm text-ink-2">
+        Os últimos logins na sua conta. A cidade é aproximada (vem do endereço da internet). Se não reconhecer
+        algum, troque a senha e encerre as outras sessões.
+      </p>
+      {acessos === null ? (
+        <p className={ALERTA_AVISO}>
+          O registro de acessos ainda não foi ativado no banco. Rode as 3 partes supabase/etapa25-1, etapa25-2 e
+          etapa25-3 no Supabase.
+        </p>
+      ) : acessos.length === 0 ? (
+        <p className="text-sm text-muted">Nenhum login registrado ainda. O próximo já aparece aqui.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {acessos.map((a, i) => {
+            const este = !!aparelhoAtual && a.aparelho_id === aparelhoAtual;
+            return (
+              <li key={a.id} className="border border-line-input bg-canvas px-3 py-2 text-sm">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-campo">
+                  {a.aparelho ?? "Aparelho desconhecido"}
+                  {este && (
+                    <span className="border border-destaque px-1.5 py-px font-display text-[11px] font-semibold uppercase tracking-[0.08em] text-destaque">
+                      Este aparelho
+                    </span>
+                  )}
+                  {i === 0 && (
+                    <span className="border border-line-strong px-1.5 py-px font-display text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
+                      Último login
+                    </span>
+                  )}
+                </p>
+                <p className="mt-0.5 text-ink-2">
+                  {DATA_HORA.format(new Date(a.criado_em))}, {COMO_ENTROU[a.metodo]}
+                </p>
+                <p className="mt-0.5 break-all text-muted">
+                  {[a.local, a.ip && `IP ${a.ip}`].filter(Boolean).join(" · ") || "Origem desconhecida"}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <div className="mt-4">
+        <button type="button" onClick={encerrarOutras} disabled={encerrando} className={BOTAO_SECUNDARIO}>
+          {encerrando ? "Encerrando…" : "Encerrar outras sessões"}
+        </button>
+        <p className={AJUDA}>Desconecta a conta de todos os outros aparelhos. Este continua conectado.</p>
+      </div>
+      {mensagem && (
+        <div className="mt-3">
+          <Alerta mensagem={mensagem} />
+        </div>
+      )}
+    </section>
+  );
+}
+
 // E-mail ----------------------------------------------------------------
 function CartaoEmail({
   email,
@@ -770,16 +887,23 @@ function traduzErroEmail(msg: string, status?: number) {
 }
 
 // Senha -----------------------------------------------------------------
-function CartaoSenha() {
+// As regras da senha nova são conferidas de novo no servidor
+// (app/api/perfil/senha).
+function CartaoSenha({ email }: { email: string }) {
   const [atual, setAtual] = useState("");
   const [nova, setNova] = useState("");
   const [repetir, setRepetir] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<Mensagem>(null);
+  const diferentes = repetir.length > 0 && repetir !== nova;
 
   async function trocar(e: FormEvent) {
     e.preventDefault();
     setMensagem(null);
+    if (!avaliarSenha(nova, email).ok) {
+      setMensagem({ tipo: "erro", texto: "A senha nova ainda não atende a todos os itens da lista abaixo do campo." });
+      return;
+    }
     if (nova !== repetir) {
       setMensagem({ tipo: "erro", texto: "As duas senhas novas não são iguais." });
       return;
@@ -807,46 +931,48 @@ function CartaoSenha() {
           <label htmlFor="senha-atual" className={ROTULO}>
             Senha atual
           </label>
-          <input
+          <CampoSenha
             id="senha-atual"
-            type="password"
             required
             autoComplete="current-password"
             value={atual}
             onChange={(e) => setAtual(e.target.value)}
-            className={CAMPO}
           />
         </div>
         <div>
           <label htmlFor="senha-nova" className={ROTULO}>
             Nova senha
           </label>
-          <input
+          <CampoSenha
             id="senha-nova"
-            type="password"
             required
             minLength={SENHA_MIN}
+            maxLength={SENHA_MAX}
             autoComplete="new-password"
             value={nova}
             onChange={(e) => setNova(e.target.value)}
-            className={CAMPO}
-            placeholder={`Mínimo ${SENHA_MIN} caracteres`}
+            placeholder={`Mínimo ${SENHA_MIN} caracteres, com letras e números`}
+            aria-describedby="forca-senha-nova"
           />
+          <ForcaSenha id="forca-senha-nova" senha={nova} email={email} />
         </div>
         <div>
           <label htmlFor="senha-repetir" className={ROTULO}>
             Repita a nova senha
           </label>
-          <input
+          <CampoSenha
             id="senha-repetir"
-            type="password"
             required
-            minLength={SENHA_MIN}
+            maxLength={SENHA_MAX}
             autoComplete="new-password"
             value={repetir}
             onChange={(e) => setRepetir(e.target.value)}
-            className={CAMPO}
+            aria-invalid={diferentes}
+            aria-describedby="aviso-senha-repetir"
           />
+          <p id="aviso-senha-repetir" aria-live="polite" className="mt-1.5 text-sm text-danger">
+            {diferentes ? "As senhas não são iguais." : null}
+          </p>
         </div>
         <Alerta mensagem={mensagem} />
         <button type="submit" disabled={salvando} className={`${BOTAO_SECUNDARIO} w-full sm:w-auto sm:self-start`}>

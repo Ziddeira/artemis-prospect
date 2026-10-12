@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { importarFotoDoGoogle } from "@/lib/perfil/fotoGoogle";
+import { registrarEntrada } from "@/lib/seguranca/acessos";
 
 // Destino dos links que o Supabase manda por e-mail (confirmação de
 // cadastro, troca de e-mail e "esqueci minha senha") e da volta do login
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
       if (viaGoogle && data.user) {
         await importarFotoDoGoogle(supabase, data.user);
       }
+      // Entrou (Google ou link do e-mail): fica no registro de acessos e,
+      // se o aparelho for novo, a pessoa recebe um aviso.
+      if (data.user) await registrarEntrada(data.user.id, viaGoogle ? "google" : "link");
       return NextResponse.redirect(`${origin}${next}`);
     }
     if (viaGoogle) {
@@ -43,8 +47,9 @@ export async function GET(request: Request) {
   // para mandar token_hash): funciona mesmo se o link for aberto em outro
   // aparelho ou navegador.
   if (supabase && tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
     if (!error) {
+      if (data.user && data.session) await registrarEntrada(data.user.id, "link");
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

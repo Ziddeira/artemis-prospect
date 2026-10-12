@@ -40,6 +40,11 @@ e, se for rodar localmente, copie `.env.example` para `.env.local`:
   das vendas, virada do mês e notificações do sino). Texto aleatório de 32+ caracteres; a
   Vercel envia sozinho nas execuções agendadas.
 
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY` — captcha da
+  criação de conta (Cloudflare Turnstile, etapa 25). A primeira é
+  pública; a segunda é server-only. Sem as duas, o cadastro funciona sem
+  captcha. Veja "Segurança do login" abaixo.
+
 Os valores do Supabase ficam em Supabase > Project Settings > API. A
 chave do Google é gerada no Google Cloud Console, com a "Places API
 (New)" ativada no projeto.
@@ -263,6 +268,18 @@ cada um no SQL Editor do Supabase:
     do tipo `contrato`. Precisa da `SUPABASE_SERVICE_ROLE_KEY`. Veja
     "Gerador de contratos" abaixo.
 
+25. Etapa 25, em **três partes, nesta ordem**:
+    `supabase/etapa25-1-seguranca-tentativas.sql`,
+    `supabase/etapa25-2-seguranca-acessos.sql` e
+    `supabase/etapa25-3-seguranca-registrar.sql` — segurança do login. Cria a
+    tabela `login_tentativas` e as funções `login_situacao` e
+    `login_registrar_tentativa` (limite de tentativas por conta e por
+    IP; guarda só hashes e apaga tudo com mais de 2 dias), a tabela
+    `acessos` e a função `registrar_acesso` (data, origem e aparelho de
+    cada login, por 6 meses; o usuário só lê os próprios) e o aviso do
+    sino do tipo `seguranca` (login num aparelho novo). Só o servidor
+    (service_role) chama as funções. Veja "Segurança do login" abaixo.
+
 ### Gerador de contratos (Solo, Pro e Platina)
 
 Em "Meus leads", o lead "Em negociação" ou "Fechado" ganha o botão
@@ -428,6 +445,37 @@ senha"). Adicione também a URL de pré-visualização da Vercel, se usar.
 4. Quem já tem conta com o mesmo e-mail continua com a mesma conta: o
    Supabase liga o Google ao usuário que já existe ("automatic identity
    linking", que vem ligado). Não crie um segundo usuário manualmente.
+
+### Segurança do login
+
+- **Login e cadastro passam pelo servidor** (`app/api/auth/entrar`,
+  `app/api/auth/cadastro` e `app/api/auth/redefinir-senha`), que confere
+  tudo de novo antes de falar com o Supabase. Pedidos vindos de outro
+  site são recusados.
+- **Senha:** mínimo de 8 caracteres, com letras e números, e sem senhas
+  óbvias (comuns, sequências, repetições, parte do e-mail). As regras
+  ficam em `lib/seguranca/senha.ts` e valem no cadastro, na troca de
+  senha do Perfil e no "Esqueci minha senha". A tela mostra o que falta.
+- **Limite de tentativas:** 5 senhas erradas seguidas pausam o login
+  daquela conta por 15 minutos (cada erro depois disso pausa de novo,
+  até 1 hora); 20 erros em 15 minutos a partir do mesmo IP pausam
+  aquele IP por 15 minutos. Regras em `lib/seguranca/limite.ts` e no SQL
+  da etapa 25.
+- **Captcha:** Cloudflare Turnstile na criação de conta, validado no
+  servidor (`lib/seguranca/captcha.ts`).
+- **Acessos:** cada login (senha, Google ou link do e-mail) grava data,
+  IP, cidade aproximada e aparelho. O Perfil mostra os últimos 5 e tem o
+  botão "Encerrar outras sessões". Login num aparelho novo gera aviso no
+  sino.
+- **Cabeçalhos de segurança** (CSP, HSTS, X-Frame-Options,
+  Referrer-Policy e outros) em `next.config.ts`. Se um dia o site passar
+  a carregar algo de outro domínio (script, iframe, conexão), libere o
+  domínio na CSP de lá.
+- **Configure também no Supabase** (Authentication > Sign In /
+  Providers > Email): "Minimum password length" = 8 e "Password
+  requirements" = letras e números. Assim o próprio Supabase recusa
+  senhas fracas mesmo para quem tentar criar conta sem passar pelo site.
+  Em Authentication > Rate Limits, confira o limite de logins por IP.
 
 ## Webhook do Asaas
 

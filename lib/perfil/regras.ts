@@ -65,4 +65,3 @@ export function situacaoTelefone(
   return verificadoEm ? "verificado" : "nao_verificado";
 }
 
-export const SENHA_MIN = 6;

@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { SENHA_MIN } from "@/lib/perfil/regras";
+import { erroSenha } from "@/lib/seguranca/senha";
+import { lerOrigem } from "@/lib/seguranca/acessos";
+import { registrarTentativa, situacaoLogin, textoEspera } from "@/lib/seguranca/limite";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,8 @@ export const dynamic = "force-dynamic";
 // 2. Com essa sessão recém-criada, grava a senha nova. Por ser um login
 //    novo, também atende à opção "Secure password change" do Supabase.
 // 3. Encerra essa sessão de teste.
+// A conferência da senha atual conta no mesmo limite de tentativas do
+// login (lib/seguranca/limite.ts), para ninguém adivinhar a senha por aqui.
 export async function POST(request: Request) {
   const env = getSupabaseEnv();
   const supabase = await createClient();
@@ -33,14 +37,21 @@ export async function POST(request: Request) {
   if (!senhaAtual) {
     return NextResponse.json({ erro: "Digite sua senha atual." }, { status: 400 });
   }
-  if (novaSenha.length < SENHA_MIN) {
-    return NextResponse.json(
-      { erro: `A nova senha precisa ter pelo menos ${SENHA_MIN} caracteres.` },
-      { status: 400 },
-    );
+  const problemaSenha = erroSenha(novaSenha, user.email);
+  if (problemaSenha) {
+    return NextResponse.json({ erro: problemaSenha }, { status: 400 });
   }
   if (novaSenha === senhaAtual) {
     return NextResponse.json({ erro: "A nova senha precisa ser diferente da atual." }, { status: 400 });
+  }
+
+  const { ip } = await lerOrigem();
+  const bloqueio = await situacaoLogin(user.email, ip);
+  if (bloqueio.segundos > 0) {
+    return NextResponse.json(
+      { erro: `Muitas tentativas erradas. Tente de novo em ${textoEspera(bloqueio.segundos)}.` },
+      { status: 429, headers: { "Retry-After": String(bloqueio.segundos) } },
+    );
   }
 
   const teste = createSupabaseClient(env.url, env.anonKey, {
@@ -59,8 +70,10 @@ export async function POST(request: Request) {
         { status: 429 },
       );
     }
+    await registrarTentativa(user.email, ip, false);
     return NextResponse.json({ erro: "A senha atual está incorreta." }, { status: 400 });
   }
+  await registrarTentativa(user.email, ip, true);
 
   const { error: erroTroca } = await teste.auth.updateUser({ password: novaSenha });
   await teste.auth.signOut({ scope: "local" });
@@ -77,7 +90,7 @@ function traduzErroSenha(msg: string) {
     return "A nova senha precisa ser diferente da atual.";
   }
   if (msg.includes("Password should") || msg.includes("weak")) {
-    return "Senha fraca. Use pelo menos 6 caracteres, misturando letras e números.";
+    return "Senha fraca. Use pelo menos 8 caracteres, com letras e números.";
   }
   console.error("[perfil/senha] Falha ao trocar senha:", msg);
   return "Não foi possível trocar a senha agora. Tente de novo em instantes.";

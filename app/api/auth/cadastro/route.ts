@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { lerOrigem, mesmaOrigem, registrarEntrada } from "@/lib/seguranca/acessos";
 import { verificarCaptcha } from "@/lib/seguranca/captcha";
 import { erroSenha } from "@/lib/seguranca/senha";
+import { vincularIndicacao } from "@/lib/indicacoes/servidor";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,14 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ erro: traduzErro(error.message, error.status) }, { status: error.status === 429 ? 429 : 400 });
+  }
+
+  // Veio por um link de indicação (cookie do /convite/<código>): liga a
+  // conta nova a quem indicou. Se o e-mail já existia, o Supabase devolve
+  // um usuário sem identidades e nada é ligado. A recompensa de quem
+  // indicou só sai quando este e-mail for confirmado (etapa 27).
+  if (data.user && (data.user.identities?.length ?? 0) > 0) {
+    await vincularIndicacao(data.user.id);
   }
 
   // Com a confirmação de e-mail desligada no Supabase, a conta já entra.

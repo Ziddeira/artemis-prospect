@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { importarFotoDoGoogle } from "@/lib/perfil/fotoGoogle";
 import { registrarEntrada } from "@/lib/seguranca/acessos";
+import { vincularIndicacao } from "@/lib/indicacoes/servidor";
 
 // Destino dos links que o Supabase manda por e-mail (confirmação de
 // cadastro, troca de e-mail e "esqueci minha senha") e da volta do login
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
       // Depois disso, o layout do painel leva quem é novo às boas-vindas.
       if (viaGoogle && data.user) {
         await importarFotoDoGoogle(supabase, data.user);
+        // Conta criada agora pelo Google, vinda de um link de indicação:
+        // liga a quem indicou (o banco recusa contas que já existiam).
+        await vincularIndicacao(data.user.id);
       }
       // Entrou (Google ou link do e-mail): fica no registro de acessos e,
       // se o aparelho for novo, a pessoa recebe um aviso.

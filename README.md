@@ -290,6 +290,83 @@ cada um no SQL Editor do Supabase:
     `SUPABASE_SERVICE_ROLE_KEY` — sem ela, o cache fica só na memória do
     servidor). Veja "Domínios" abaixo.
 
+27. Etapa 27, em **três partes, nesta ordem**:
+    `supabase/etapa27-1-relatorio-mensal.sql`,
+    `supabase/etapa27-2-indicacoes-base.sql` e
+    `supabase/etapa27-3-indicacoes-recompensas.sql` — relatório mensal
+    ("Meu mês") e link de indicação. A parte 1 cria a tabela
+    `leads_funil_eventos` (a data de cada mudança de situação do lead, por
+    gatilho; os leads que já tinham avançado ganham uma linha estimada com
+    a data do último contato), a tabela `relatorios_mensais` (o usuário só
+    lê os próprios) e a função `gerar_relatorios_mensais`, com o aviso do
+    sino do tipo `relatorio`. A parte 2 cria `profiles.codigo_indicacao`,
+    a tabela `indicacoes` (ninguém do navegador lê nem escreve), a função
+    `vincular_indicacao` (só o servidor) e `minhas_indicacoes` (Perfil). A
+    parte 3 cria as recompensas: gatilho na confirmação do e-mail
+    (`auth.users`) e na tabela `cobrancas` (1º plano pago e estorno), o
+    limite de 20 por mês e o aviso do sino do tipo `indicacao`. Precisa
+    da `SUPABASE_SERVICE_ROLE_KEY`. Veja "Relatório mensal", "Link de
+    indicação" e "Exportar carteira" abaixo.
+
+### Relatório mensal ("Meu mês")
+
+Todo dia 1º, depois de fechar o rank, a rotina `/api/cron/fechar-mes`
+gera o resumo do mês que acabou para cada usuário ativo (quem buscou,
+desbloqueou, mexeu no funil ou teve venda no mês) e manda o aviso no
+sino, que abre `/painel/meu-mes/AAAA-MM`. A rotina diária do sino é a
+reserva: nos dias 1º a 3, completa quem ficou de fora. Não envia e-mail.
+
+- **Números:** leads desbloqueados; contatados (primeiro contato no
+  mês); em negociação (entraram em negociação no mês); fechados (vendas
+  registradas no mês); vendas verificadas no mês; pontos ganhos (10 por
+  venda registrada + 40 por verificada, a mesma regra do Score); posição
+  no rank. Cada número aparece comparado com o mês anterior.
+- **Foto do mês:** o resumo é guardado no dia 1º (com os números do mês
+  anterior junto) e não muda depois.
+- **Testar na hora** (gera setembro de 2026 e manda o aviso):
+
+  ```sql
+  select public.gerar_relatorios_mensais('2026-09-01');
+  ```
+
+### Link de indicação
+
+No Perfil, cada pessoa tem o link `https://artemisprospect.com.br/convite/<código>`,
+com os botões "Copiar link" e "Compartilhar". O link guarda o código num
+cookie (30 dias) e abre o cadastro; a conta criada (por e-mail ou pelo
+Google) fica ligada a quem indicou.
+
+- **Recompensa:** +10 desbloqueios quando a pessoa indicada confirma o
+  e-mail; +30 quando ela paga um plano pela primeira vez. Sempre em
+  desbloqueios, nunca em buscas. Entram em `profiles.creditos_premio` (o
+  mesmo saldo extra do prêmio do rank: não vence e é gasto depois dos
+  créditos do plano).
+- **Contra fraude (tudo no banco):** não vale indicar a si mesmo (mesma
+  conta ou mesmo e-mail, inclusive `nome+1@gmail.com` e pontos do Gmail);
+  só conta criada há menos de 1 hora pode ser ligada; cada conta só é
+  indicada uma vez; no máximo 20 indicações recompensadas por mês por
+  pessoa; nada sai antes da confirmação do e-mail; se o 1º pagamento for
+  estornado, os 30 saem do saldo de quem indicou (sem ficar negativo).
+- O Perfil mostra quantas pessoas a pessoa indicou, quantas confirmaram,
+  quantas assinaram e quantos desbloqueios ganhou. As regras numéricas
+  ficam nas funções `indicacao_*` do SQL e em `lib/indicacoes/regras.ts`.
+
+### Exportar carteira
+
+Em "Meus leads", os botões "Exportar Excel" e "Exportar CSV" baixam a
+carteira do usuário (`/api/leads/exportar`; a rota confere o login e só lê
+os dados da própria pessoa). O arquivo leva: código do lugar no Google
+(`place_id`), link do Google Maps, situação, anotações, data do
+desbloqueio, último contato, retorno agendado e a venda (site, data do
+fechamento, valor, situação e pontos).
+
+**Nome, telefone e endereço não vão no arquivo.** Os Termos da Google Maps
+Platform proíbem exportar o conteúdo do Google para fora do serviço e,
+como exemplo, "copiar e salvar nomes de empresas, endereços". O cache de
+30 dias do Ártemis fica no nosso banco e é apagado; um arquivo baixado sai
+do nosso controle. O `place_id` pode ser guardado sem prazo, por isso vai,
+com o link do Maps para abrir a empresa.
+
 ### Domínios
 
 A aba "Domínios" confere se um nome está livre em .com.br, .com, .net,
@@ -420,14 +497,16 @@ O `vercel.json` agenda três rotas, que só aceitam chamadas com o
 - `/api/cron/fechar-mes` — dia 1º logo depois da meia-noite (Brasília).
   Guarda o rank do mês que acabou e credita o prêmio (25, 15 e 10
   desbloqueios). Não paga duas vezes, e fecha meses que tenham ficado
-  para trás.
+  para trás. Depois gera o resumo "Meu mês" de cada usuário ativo
+  (etapa 27).
 - `/api/cron/notificacoes` — todo dia às 8h (Brasília). Gera os avisos
   do sino: renovação (3 dias antes, 1 vez por ciclo), saldo baixo
   (3 buscas ou menos / 5 desbloqueios ou menos, 1 vez por ciclo),
   novidades e no máximo 1 incentivo por dia (venda pendente há mais de
   7 dias, negociação parada há mais de 7 dias, lead sem contato há mais
   de 3 dias), o aviso dos retornos agendados para o dia (etapa 10) e
-  os avisos escritos em Gestão > Avisos (etapa 11).
+  os avisos escritos em Gestão > Avisos (etapa 11) e, nos dias 1º a 3,
+  o resumo "Meu mês" de quem ficou de fora no dia 1º (etapa 27).
   Rodar duas vezes no mesmo dia não duplica nada.
 
 ### Novidades do site (sino)

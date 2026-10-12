@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { lerPerfil } from "@/lib/perfil/dados";
 import { lerModelosMensagem } from "@/lib/perfil/modelos";
 import { idDoAparelho } from "@/lib/seguranca/acessos";
+import { faltaEtapa27, type ResumoIndicacoes } from "@/lib/indicacoes/regras";
+import { URL_SITE } from "@/lib/site";
 import PerfilClient, { type Acesso } from "./PerfilClient";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +76,15 @@ export default async function PerfilPage({
     .returns<Acesso[]>();
   const aparelhoAtual = await idDoAparelho();
 
+  // Link de indicação (etapa 27). Sem o script, a função não existe
+  // (null): o cartão avisa em vez de quebrar a página.
+  const { data: indicacoes, error: erroIndicacoes } = await supabase
+    .rpc("minhas_indicacoes")
+    .maybeSingle<ResumoIndicacoes>();
+  if (erroIndicacoes && !faltaEtapa27(erroIndicacoes.code)) {
+    console.error("[perfil] indicações:", erroIndicacoes.code, erroIndicacoes.message);
+  }
+
   return (
     <PerfilClient
       userId={user.id}
@@ -92,6 +103,8 @@ export default async function PerfilPage({
       assinaturaSalva={erroAssinatura ? null : !!assinatura?.assinatura_path}
       acessos={erroAcessos ? null : (acessos ?? [])}
       aparelhoAtual={aparelhoAtual}
+      indicacoes={erroIndicacoes ? null : (indicacoes ?? null)}
+      urlSite={URL_SITE}
     />
   );
 }

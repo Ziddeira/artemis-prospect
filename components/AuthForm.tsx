@@ -10,6 +10,10 @@ import BotaoGoogle from "@/components/BotaoGoogle";
 
 type Mode = "login" | "cadastro";
 
+// Link dentro do texto corrido (Termos e Privacidade): sublinhado e com
+// área de toque maior sem quebrar a linha.
+const LINK_DOCUMENTO = "font-semibold text-destaque underline underline-offset-4 py-2";
+
 export default function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -154,6 +158,22 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               : "Criar conta"}
         </button>
       </form>
+
+      {/* Vale também para quem cria a conta pelo botão do Google. */}
+      {mode === "cadastro" && (
+        <p className="mt-4 text-center text-sm leading-relaxed text-ink-2">
+          Ao criar a conta, com e-mail ou com o Google, você confirma que tem 18 anos ou mais e
+          concorda com os{" "}
+          <Link href="/termos" className={LINK_DOCUMENTO}>
+            Termos de uso
+          </Link>{" "}
+          e a{" "}
+          <Link href="/privacidade" className={LINK_DOCUMENTO}>
+            Política de privacidade
+          </Link>
+          .
+        </p>
+      )}
 
       <p className="mt-6 text-center text-sm text-ink-2">
         {mode === "login" ? (

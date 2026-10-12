@@ -13,6 +13,14 @@ export const NOME_SITE = "Ártemis Prospect";
 
 export const TITULO_INICIO = "Ártemis Prospect — encontre empresas sem site para prospectar";
 
+// E-mail de contato publicado na Política de privacidade e nos Termos
+// de uso (pedidos da LGPD, exclusão de conta, reembolso e dúvidas).
+export const EMAIL_CONTATO = "contato@artemisprospect.com.br";
+
+// Data da versão atual da Política de privacidade e dos Termos de uso.
+// Mudou o texto de um deles? Atualize aqui.
+export const DATA_DOCUMENTOS_LEGAIS = "12 de outubro de 2026";
+
 export const DESCRICAO_SITE =
   "Ache clientes que ainda não têm site. Busque por nicho e bairro e veja quem não tem site, quem depende do Airbnb e quem só usa Instagram, com o WhatsApp pronto para chamar.";
 
@@ -22,6 +30,8 @@ export const PAGINAS_PUBLICAS = [
   { caminho: "/", prioridade: 1, frequencia: "weekly" },
   { caminho: "/cadastro", prioridade: 0.8, frequencia: "monthly" },
   { caminho: "/login", prioridade: 0.5, frequencia: "monthly" },
+  { caminho: "/privacidade", prioridade: 0.3, frequencia: "yearly" },
+  { caminho: "/termos", prioridade: 0.3, frequencia: "yearly" },
 ] as const;
 
 // Metadados de uma página pública: título, descrição, URL canônica,

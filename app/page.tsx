@@ -8,6 +8,7 @@ import type { Situacao } from "@/lib/leads/classificacao";
 import EtiquetaSituacao from "@/components/leads/EtiquetaSituacao";
 import { BOTAO, BOTAO_GRANDE, BOTAO_NEUTRO, BOTAO_SECUNDARIO, BOTAO_WHATSAPP, CARTAO, ROTULO_SECAO } from "@/components/ui";
 import Logo from "@/components/marca/Logo";
+import Rodape from "@/components/Rodape";
 import Mira from "@/components/marca/Mira";
 import Score from "@/components/marca/Score";
 import SeletorTema from "@/components/tema/SeletorTema";
@@ -211,15 +212,7 @@ export default async function Home() {
         </section>
       </main>
 
-      <footer className="px-seguro pb-seguro border-t border-line-2 bg-canvas sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 py-6 text-sm text-muted">
-          <span className="flex items-center gap-3">
-            <Logo variante="simbolo" tamanho={28} />
-            <span>© {new Date().getFullYear()} Ártemis Prospect</span>
-          </span>
-          <span>Feito para quem cria sites.</span>
-        </div>
-      </footer>
+      <Rodape />
     </div>
   );
 }

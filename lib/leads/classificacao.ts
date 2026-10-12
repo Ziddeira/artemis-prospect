@@ -3,7 +3,7 @@ import type { SinalBrasileiro } from "./brasileiro";
 import type { Confianca } from "./confianca";
 import type { CodigoPais, ConfigPais } from "./paises";
 
-// "internacional" = aba Internacional (plano Pro): busca em outro país,
+// "internacional" = aba Internacional (plano Platina): busca em outro país,
 // escolhido em lib/leads/paises.ts.
 export type Modo = "negocios" | "hospedagem" | "internacional";
 

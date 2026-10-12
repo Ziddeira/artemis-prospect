@@ -135,7 +135,7 @@ export default function PerfilClient({
 }
 
 // Mensagens da aba Internacional ------------------------------------------
-// Modelos usados nos leads da aba Internacional (plano Pro): um e-mail com
+// Modelos usados nos leads da aba Internacional (plano Platina): um e-mail com
 // assunto e uma mensagem curta, para formulário de contato ou mensagem
 // direta. Em inglês para os leads em geral; em português para os
 // prováveis negócios brasileiros (a curta também vai no WhatsApp). Os
@@ -146,7 +146,7 @@ const TEXTOS_CARTAO: Record<
 > = {
   en: {
     titulo: "Mensagens em inglês",
-    descricao: "Usadas nos leads da aba Internacional (plano Pro), com o botão de copiar.",
+    descricao: "Usadas nos leads da aba Internacional (plano Platina), com o botão de copiar.",
     curta: "Mensagem curta (formulário de contato ou mensagem direta)",
     exemplo: "Joe's Barber Shop",
   },

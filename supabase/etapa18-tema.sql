@@ -52,3 +52,8 @@ grant execute on function public.definir_tema(text) to authenticated;
 -- etapa adicionou coluna: o navegador só lê a própria linha e não
 -- escreve nada direto.
 revoke insert, update, delete on public.profiles from authenticated, anon;
+
+-- 4. Avisa a API do Supabase que há função nova ---------------------------------
+-- Sem isto, a API pode demorar para "enxergar" a função definir_tema e
+-- o site continua dizendo que o tema não foi ativado.
+notify pgrst, 'reload schema';

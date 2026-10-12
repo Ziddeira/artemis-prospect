@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     // Sem o script da etapa 18 a função não existe. O tema já mudou na
     // tela e fica guardado neste aparelho; só não vai para o perfil.
     if (faltaEtapa5(error.code)) {
+      console.warn("[perfil/tema] Função definir_tema não encontrada:", error.code, error.message);
       return NextResponse.json(
         { erro: "O tema ainda não foi ativado no banco. Rode o script supabase/etapa18-tema.sql no Supabase." },
         { status: 503 },

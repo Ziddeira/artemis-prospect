@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Limite de tentativas de login (supabase/etapa25-seguranca.sql).
+// Limite de tentativas de login (supabase/etapa25-1-seguranca-tentativas.sql).
 // As regras ficam no banco, nas funções login_situacao e
 // login_registrar_tentativa:
 //   * por conta: 5 senhas erradas seguidas pausam o login daquele e-mail

@@ -268,7 +268,10 @@ cada um no SQL Editor do Supabase:
     do tipo `contrato`. Precisa da `SUPABASE_SERVICE_ROLE_KEY`. Veja
     "Gerador de contratos" abaixo.
 
-25. `supabase/etapa25-seguranca.sql` — segurança do login. Cria a
+25. Etapa 25, em **três partes, nesta ordem**:
+    `supabase/etapa25-1-seguranca-tentativas.sql`,
+    `supabase/etapa25-2-seguranca-acessos.sql` e
+    `supabase/etapa25-3-seguranca-registrar.sql` — segurança do login. Cria a
     tabela `login_tentativas` e as funções `login_situacao` e
     `login_registrar_tentativa` (limite de tentativas por conta e por
     IP; guarda só hashes e apaga tudo com mais de 2 dias), a tabela

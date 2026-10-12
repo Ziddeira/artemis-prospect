@@ -722,8 +722,8 @@ function CartaoSeguranca({ acessos, aparelhoAtual }: { acessos: Acesso[] | null;
       </p>
       {acessos === null ? (
         <p className={ALERTA_AVISO}>
-          O registro de acessos ainda não foi ativado no banco. Rode o script supabase/etapa25-seguranca.sql no
-          Supabase.
+          O registro de acessos ainda não foi ativado no banco. Rode as 3 partes supabase/etapa25-1, etapa25-2 e
+          etapa25-3 no Supabase.
         </p>
       ) : acessos.length === 0 ? (
         <p className="text-sm text-muted">Nenhum login registrado ainda. O próximo já aparece aqui.</p>

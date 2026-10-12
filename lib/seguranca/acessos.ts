@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { descreverAparelho } from "./aparelho";
 
-// Registro de acessos (supabase/etapa25-seguranca.sql): cada login
+// Registro de acessos (supabase/etapa25-2 e etapa25-3): cada login
 // guarda data, origem (IP e cidade aproximada) e aparelho, para a pessoa
 // ver no Perfil. Login num aparelho que a conta nunca usou gera um aviso
 // no sino.

@@ -23,10 +23,25 @@ const DICA: Record<Tema, string> = {
   sistema: "Seguir o tema do sistema",
 };
 
+// Caixa que abre embaixo do botão. No celular ela ocupa a largura da
+// tela (presa abaixo da barra do topo), como o sino, para nunca sair
+// pela borda; do sm para cima fica alinhada à direita do botão.
+const CAIXA_FLUTUANTE =
+  "fixed inset-x-3 top-[calc(env(safe-area-inset-top)+4.5rem)] z-40 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-1 sm:w-64";
+
 function useEscolherTema(salvar: boolean) {
   const [erro, setErro] = useState<string | null>(null);
 
+  // O aviso some sozinho depois de alguns segundos.
+  useEffect(() => {
+    if (!erro) return;
+    const t = window.setTimeout(() => setErro(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [erro]);
+
   async function escolher(tema: Tema) {
+    // O tema muda na hora e fica guardado neste aparelho; salvar no
+    // perfil (para valer nos outros aparelhos) é um extra.
     aplicarTema(tema);
     setErro(null);
     if (!salvar) return;
@@ -36,12 +51,14 @@ function useEscolherTema(salvar: boolean) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tema }),
       });
-      if (!resposta.ok) {
-        const corpo = (await resposta.json().catch(() => null)) as { erro?: string } | null;
-        setErro(corpo?.erro ?? "Não deu para salvar no perfil. Vale só neste aparelho por enquanto.");
+      // 503 = o script do banco ainda não foi rodado. Isso é assunto do
+      // dono do site, não de quem está usando: o tema já trocou, então
+      // não mostra nada (o servidor registra no log).
+      if (!resposta.ok && resposta.status !== 503) {
+        setErro("O tema mudou neste aparelho, mas não deu para salvar no seu perfil agora.");
       }
     } catch {
-      setErro("Sem conexão. O tema vale só neste aparelho por enquanto.");
+      setErro("O tema mudou neste aparelho. Sem conexão para salvar no seu perfil.");
     }
   }
 
@@ -100,7 +117,7 @@ function BotoesTema({ salvar, className }: { salvar: boolean; className: string 
         })}
       </div>
       {erro && (
-        <p role="status" className="mt-1.5 text-xs text-danger">
+        <p role="status" className="mt-1.5 text-xs text-ink-2">
           {erro}
         </p>
       )}
@@ -163,7 +180,7 @@ function MenuTema({ salvar, className }: { salvar: boolean; className: string })
           id={`${id}-lista`}
           role="radiogroup"
           aria-label="Tema"
-          className="absolute right-0 top-full z-40 mt-1 w-64 border border-line-strong bg-surface py-1 shadow-[0_12px_32px_var(--color-sombra)]"
+          className={`${CAIXA_FLUTUANTE} border border-line-strong bg-surface py-1 shadow-[0_12px_32px_var(--color-sombra)]`}
         >
           {TEMAS.map((tema) => {
             const { Icone: IconeOpcao } = OPCOES[tema];
@@ -193,7 +210,7 @@ function MenuTema({ salvar, className }: { salvar: boolean; className: string })
         </div>
       )}
       {erro && (
-        <p role="status" className="absolute right-0 top-full z-40 mt-1 w-64 border border-danger/40 bg-surface px-3 py-2 text-xs text-danger">
+        <p role="status" className={`${CAIXA_FLUTUANTE} border border-line-strong bg-surface px-3 py-2 text-sm text-ink-2 shadow-[0_12px_32px_var(--color-sombra)]`}>
           {erro}
         </p>
       )}

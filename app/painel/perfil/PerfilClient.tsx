@@ -39,6 +39,7 @@ import {
   validarApelido,
   validarTelefone,
 } from "@/lib/perfil/regras";
+import { BONUS_CADASTRO, BONUS_PLANO, type ResumoIndicacoes } from "@/lib/indicacoes/regras";
 
 const CARTAO = `${CARTAO_BASE} p-5 sm:p-6`;
 const TITULO_CARTAO = "text-lg font-bold text-ink";
@@ -59,6 +60,8 @@ export default function PerfilClient({
   assinaturaSalva,
   acessos,
   aparelhoAtual,
+  indicacoes,
+  urlSite,
 }: {
   userId: string;
   email: string;
@@ -81,6 +84,10 @@ export default function PerfilClient({
   acessos: Acesso[] | null;
   // Código deste navegador (cookie), para marcar "este aparelho".
   aparelhoAtual: string | null;
+  // Link de indicação e números. null = etapa 27 ainda não rodada no banco.
+  indicacoes: ResumoIndicacoes | null;
+  // Endereço oficial do site, para montar o link de indicação.
+  urlSite: string;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -106,6 +113,7 @@ export default function PerfilClient({
         <div className="flex flex-col gap-6">
           <CartaoFoto userId={userId} perfil={perfil} email={email} pendente={pendente} />
           <CartaoDados perfil={perfil} desativado={pendente === "etapa5"} />
+          <CartaoIndicacao resumo={indicacoes} urlSite={urlSite} />
           <CartaoComunidade apelido={perfil?.apelido ?? null} mostrarVendas={mostrarVendas} />
           <CartaoAssinatura salva={assinaturaSalva} />
         </div>
@@ -491,6 +499,106 @@ function CartaoTour() {
         Rever o tour
       </button>
     </section>
+  );
+}
+
+// Link de indicação ---------------------------------------------------
+// O link leva a /convite/<código>, que guarda o código e abre o cadastro.
+// Quem decide e paga as recompensas é o banco (etapa 27); aqui é só o
+// link e os números.
+function CartaoIndicacao({ resumo, urlSite }: { resumo: ResumoIndicacoes | null; urlSite: string }) {
+  const [mensagem, setMensagem] = useState<Mensagem>(null);
+  const link = resumo ? `${urlSite}/convite/${resumo.codigo}` : "";
+  const textoConvite = `Uso o Ártemis Prospect para achar empresas sem site e fechar clientes. Crie sua conta grátis pelo meu link: ${link}`;
+
+  async function copiar() {
+    setMensagem(null);
+    try {
+      await navigator.clipboard.writeText(link);
+      setMensagem({ tipo: "ok", texto: "Link copiado. É só colar na conversa." });
+    } catch {
+      setMensagem({ tipo: "erro", texto: "Não deu para copiar sozinho. Selecione o link e copie." });
+    }
+  }
+
+  async function compartilhar() {
+    setMensagem(null);
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Ártemis Prospect", text: textoConvite });
+      } catch {
+        // A pessoa fechou a janela de compartilhar: nada a fazer.
+      }
+      return;
+    }
+    // Computador sem "compartilhar" do sistema: abre o WhatsApp.
+    window.open(`https://wa.me/?text=${encodeURIComponent(textoConvite)}`, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <section aria-labelledby="titulo-indicacao" className={CARTAO}>
+      <h2 id="titulo-indicacao" className={TITULO_CARTAO}>
+        Indique e ganhe desbloqueios
+      </h2>
+      <p className="mt-1 mb-4 text-sm text-ink-2">
+        Mande seu link para outros web designers. Quando a pessoa criar a conta por ele e confirmar o e-mail, você
+        ganha <strong className="text-ink">{BONUS_CADASTRO} desbloqueios</strong>. Quando ela assinar um plano pago
+        pela primeira vez, mais <strong className="text-ink">{BONUS_PLANO}</strong>. Os desbloqueios ganhos não
+        vencem.
+      </p>
+
+      {!resumo ? (
+        <p role="alert" className={ALERTA_AVISO}>
+          O link de indicação ainda não foi ativado no banco. Rode as 3 partes supabase/etapa27-1, etapa27-2 e
+          etapa27-3 no Supabase, nessa ordem.
+        </p>
+      ) : (
+        <>
+          <label htmlFor="link-indicacao" className={ROTULO}>
+            Seu link
+          </label>
+          <input
+            id="link-indicacao"
+            type="text"
+            readOnly
+            value={link}
+            onFocus={(e) => e.currentTarget.select()}
+            className={CAMPO}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={copiar} className={BOTAO_SECUNDARIO}>
+              Copiar link
+            </button>
+            <button type="button" onClick={compartilhar} className={BOTAO_NEUTRO}>
+              Compartilhar
+            </button>
+          </div>
+          <div className="mt-3" aria-live="polite">
+            <Alerta mensagem={mensagem} />
+          </div>
+
+          <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <NumeroIndicacao rotulo="Indicados" valor={resumo.indicados} />
+            <NumeroIndicacao rotulo="Confirmaram o e-mail" valor={resumo.confirmados} />
+            <NumeroIndicacao rotulo="Assinaram" valor={resumo.assinantes} />
+            <NumeroIndicacao rotulo="Desbloqueios ganhos" valor={resumo.desbloqueios_ganhos} destaque />
+          </dl>
+          <p className={AJUDA}>
+            Recompensas este mês: {resumo.recompensadas_mes} de {resumo.limite_mes}. Não vale indicar a si mesmo, e
+            a recompensa só sai depois que a pessoa indicada confirma o e-mail.
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function NumeroIndicacao({ rotulo, valor, destaque = false }: { rotulo: string; valor: number; destaque?: boolean }) {
+  return (
+    <div className="border border-line px-3 py-2.5">
+      <dt className="text-xs text-muted">{rotulo}</dt>
+      <dd className={`mt-0.5 font-display text-2xl font-bold ${destaque ? "text-destaque" : "text-ink"}`}>{valor}</dd>
+    </div>
   );
 }
 

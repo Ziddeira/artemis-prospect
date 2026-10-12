@@ -106,6 +106,14 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           : "Leva menos de um minuto."
       }
     >
+      {/* Veio pelo link de indicação de alguém (/convite/<código>). */}
+      {cadastro && searchParams.get("convite") && (
+        <p role="status" className={`${ALERTA_SUCESSO} mb-6`}>
+          Você veio pelo convite de um colega. Crie sua conta (com o Google ou com e-mail) e ela fica ligada à
+          indicação.
+        </p>
+      )}
+
       <BotaoGoogle />
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">

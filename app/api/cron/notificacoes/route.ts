@@ -4,6 +4,7 @@ import { cronAutorizado } from "@/lib/cron/autorizacao";
 import { registrarErro } from "@/lib/erros/registrar";
 import { faltaEtapa19, voltarPrecoNormal } from "@/lib/pagamentos/cupons";
 import { faltaEtapa23 } from "@/lib/sites/dados";
+import { gerarRelatoriosMensais } from "@/lib/relatorio/servidor";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,11 @@ export async function GET(request: Request) {
     });
   }
 
+  // Resumo do mês (etapa 27): a rotina do dia 1º (fechar-mes) já gera.
+  // Esta é a reserva: nos dias 1º a 3, completa quem tiver ficado de fora
+  // se aquela rodada falhou. Nos outros dias a função não faz nada.
+  const relatorios = await gerarRelatoriosMensais(admin);
+
   const geradas = {
     ...(data as object),
     ...(retorno.data as object | null),
@@ -92,6 +98,7 @@ export async function GET(request: Request) {
     ...(cupons.error ? {} : { fim_cupom: cupons.data }),
     preco_normal: precoNormal,
     ...(sites.error ? {} : { sites_expirados: sites.data }),
+    ...(relatorios === null ? {} : { relatorios }),
   };
   console.log("[cron/notificacoes] geradas:", JSON.stringify(geradas));
   return NextResponse.json({ geradas });

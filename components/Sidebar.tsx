@@ -42,7 +42,7 @@ type Item = {
 const ITENS: Item[] = [
   { href: "/painel/buscar", label: "Buscar", curto: "Buscar", Icone: IconeBuscar },
   { href: "/painel/meus-leads", label: "Meus leads", curto: "Leads", Icone: IconeLeads, tour: "meus-leads" },
-  { href: "/painel/score", label: "Score", curto: "Score", Icone: IconeTrofeu, ativoEm: ["/painel/rank"], tour: "score" },
+  { href: "/painel/score", label: "Score", curto: "Score", Icone: IconeTrofeu, ativoEm: ["/painel/rank", "/painel/meu-mes"], tour: "score" },
   { href: "/painel/comunidade", label: "Comunidade", curto: "Comunidade", Icone: IconeComunidade },
   { href: "/painel/mensagens", label: "Mensagens", curto: "Mensagens", Icone: IconeMensagens, contador: true },
   { href: "/painel/plano", label: "Meu plano", curto: "Plano", Icone: IconePlano, tour: "plano" },
@@ -58,7 +58,7 @@ const ITENS_LATERAL: Item[] = [
   { href: "/painel/sites", label: "Meus sites", curto: "Sites", Icone: IconeSite },
   { href: "/painel/contratos", label: "Contratos", curto: "Contratos", Icone: IconeContrato },
   { href: "/painel/dominios", label: "Domínios", curto: "Domínios", Icone: IconeGlobo },
-  { href: "/painel/score", label: "Score", curto: "Score", Icone: IconeTrofeu, tour: "score" },
+  { href: "/painel/score", label: "Score", curto: "Score", Icone: IconeTrofeu, ativoEm: ["/painel/meu-mes"], tour: "score" },
   { href: "/painel/rank", label: "Rank do mês", curto: "Rank", Icone: IconeRank },
   ITENS[3],
   ITENS[4],
@@ -108,8 +108,8 @@ export default function Sidebar({
         </Link>
 
         <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-1">
-          {lateral.map(({ href, label, Icone, tour, contador }) => {
-            const atual = ativo(href);
+          {lateral.map(({ href, label, Icone, tour, contador, ativoEm }) => {
+            const atual = ativo(href) || (ativoEm ?? []).some(ativo);
             return (
               <Link
                 key={href}

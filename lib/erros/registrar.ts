@@ -14,7 +14,9 @@ export type OrigemErro =
   | "notificacoes"
   | "cupons"
   | "sites_ia"
-  | "contratos";
+  | "contratos"
+  | "indicacao"
+  | "relatorio";
 
 export async function registrarErro(
   origem: OrigemErro,

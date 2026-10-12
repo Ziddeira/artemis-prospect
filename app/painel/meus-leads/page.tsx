@@ -4,7 +4,7 @@ import { cacheValido, type DadosLead } from "@/lib/leads/dadosLead";
 import { situacaoFunilValida, type StatusVenda, type VendaResumo } from "@/lib/leads/funil";
 import type { MarcacaoInvalido, MotivoInvalido, SemDevolucao } from "@/lib/leads/invalido";
 import { EstadoVazio, TituloPagina, BOTAO, BOTAO_NEUTRO } from "@/components/ui";
-import { IconeContrato, IconeGlobo, IconeSeta, IconeSite } from "@/components/Icones";
+import { IconeBaixar, IconeContrato, IconeGlobo, IconeSeta, IconeSite } from "@/components/Icones";
 import { lerModelosMensagem } from "@/lib/perfil/modelos";
 import { temContratos } from "@/lib/planos";
 import type { StatusContrato } from "@/lib/contratos/dados";
@@ -172,6 +172,8 @@ export default async function MeusLeadsPage() {
         </div>
       </TituloPagina>
 
+      {leads.length > 0 && <Exportar />}
+
       {leads.length ? (
         <MeusLeadsClient
           leads={leads}
@@ -219,6 +221,32 @@ function montarLeads(linhas: Linha[], vendas: LinhaVenda[]): LeadSalvo[] {
     venda: vendaPorLead.get(l.place_id) ?? null,
     retorno: l.retorno_em ? { em: l.retorno_em, obs: l.retorno_obs ?? null } : null,
   }));
+}
+
+// Exportar a carteira (rota /api/leads/exportar, que confere o login e
+// só lê os dados do próprio usuário).
+function Exportar() {
+  return (
+    <section aria-labelledby="titulo-exportar" className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <h2 id="titulo-exportar" className="sr-only">
+        Exportar carteira
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        <a href="/api/leads/exportar?formato=xlsx" download className={BOTAO_NEUTRO}>
+          <IconeBaixar width={18} height={18} />
+          Exportar Excel
+        </a>
+        <a href="/api/leads/exportar?formato=csv" download className={BOTAO_NEUTRO}>
+          <IconeBaixar width={18} height={18} />
+          Exportar CSV
+        </a>
+      </div>
+      <p className="max-w-xl text-sm text-muted">
+        O arquivo leva situação, anotações, datas e vendas, com o link do Google Maps de cada lead. Nome, telefone e
+        endereço não vão no arquivo: as regras do Google Maps não permitem tirar esses dados do Ártemis.
+      </p>
+    </section>
+  );
 }
 
 function Aviso({ texto }: { texto: string }) {

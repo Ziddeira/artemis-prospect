@@ -32,7 +32,9 @@ type Tipo =
   | "suporte"
   | "comunidade"
   | "contrato"
-  | "seguranca";
+  | "seguranca"
+  | "relatorio"
+  | "indicacao";
 
 export interface Notificacao {
   id: number;
@@ -156,6 +158,8 @@ const ROTULO_TIPO: Record<Tipo, string> = {
   comunidade: "Comunidade",
   contrato: "Contrato",
   seguranca: "Segurança",
+  relatorio: "Meu mês",
+  indicacao: "Indicação",
 };
 
 const COR_TIPO: Record<Tipo, string> = {
@@ -170,6 +174,8 @@ const COR_TIPO: Record<Tipo, string> = {
   comunidade: "border-line-strong text-ink-2",
   contrato: "border-primary bg-primary text-primary-ink",
   seguranca: "border-primary bg-primary text-primary-ink",
+  relatorio: "border-destaque text-destaque",
+  indicacao: "border-destaque text-destaque",
 };
 
 function quando(iso: string) {

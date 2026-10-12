@@ -15,8 +15,8 @@ export interface Plano {
   desbloqueios: number;
   buscas: number;
   hospedagem: boolean;
-  // Aba Internacional (EUA e Canadá). Quem confere de verdade é a função
-  // SQL iniciar_busca (etapa 21).
+  // Aba Internacional (EUA e Canadá), só no Platina. Quem confere de
+  // verdade é a função SQL iniciar_busca (etapa28-internacional-platina.sql).
   internacional: boolean;
   // Gerações de site com IA por mês (etapa 23). Quem confere de verdade
   // são as funções SQL reservar_geracao_site e reservar_ajuste_site.
@@ -29,7 +29,7 @@ export interface Plano {
 export const PLANOS: Record<PlanoId, Plano> = {
   gratis: { id: "gratis", nome: "Grátis", preco: 0, desbloqueios: 5, buscas: 3, hospedagem: false, internacional: false, sites: 0, contratos: false },
   solo: { id: "solo", nome: "Solo", preco: 34.9, desbloqueios: 50, buscas: 20, hospedagem: false, internacional: false, sites: 0, contratos: true },
-  pro: { id: "pro", nome: "Pro", preco: 69.9, desbloqueios: 100, buscas: 45, hospedagem: true, internacional: true, sites: 0, contratos: true },
+  pro: { id: "pro", nome: "Pro", preco: 69.9, desbloqueios: 100, buscas: 45, hospedagem: true, internacional: false, sites: 0, contratos: true },
   platina: { id: "platina", nome: "Platina", preco: 89.9, desbloqueios: 100, buscas: 45, hospedagem: true, internacional: true, sites: 5, contratos: true },
 };
 
@@ -47,9 +47,14 @@ export function ehPlanoPago(valor: unknown): valor is PlanoPago {
   return valor === "solo" || valor === "pro" || valor === "platina";
 }
 
-// Modo Hospedagem e aba Internacional.
+// Modo Hospedagem (Pro e Platina).
 export function temRecursosPro(plano: string): boolean {
   return plano === "pro" || plano === "platina";
+}
+
+// Aba Internacional (só Platina).
+export function temInternacional(plano: string): boolean {
+  return PLANOS[plano as PlanoId]?.internacional ?? false;
 }
 
 // Gerador de contratos: todos os planos pagos.

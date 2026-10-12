@@ -164,8 +164,8 @@ export const PLANOS_TEXTO = {
   paraQuem: {
     gratis: "Para testar sem cartão.",
     solo: "Para quem está começando a prospectar.",
-    pro: "Para prospectar toda semana, inclusive hospedagens e fora do Brasil.",
-    platina: "Tudo do Pro, mais sites gerados com IA para entregar rápido.",
+    pro: "Para prospectar toda semana, inclusive hospedagens.",
+    platina: "Tudo do Pro, mais clientes fora do Brasil e sites gerados com IA para entregar rápido.",
   },
   planoDestaque: "pro",
   seloDestaque: "Recomendado",

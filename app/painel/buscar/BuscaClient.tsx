@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { LeadResultado, Modo, Situacao } from "@/lib/leads/classificacao";
 import { PAISES, PAISES_INTERNACIONAIS, configPais, type CodigoPais } from "@/lib/leads/paises";
 import type { ModelosPorIdioma } from "@/lib/perfil/modelos";
-import { temRecursosPro } from "@/lib/planos";
+import { temInternacional, temRecursosPro } from "@/lib/planos";
 import { VALIDADE_CACHE_DIAS } from "@/lib/leads/dadosLead";
 import { dataCurta, quandoFoi, type UltimaBusca } from "@/lib/leads/ultimaBusca";
 import { linkBuscaDominio } from "@/lib/dominios/regras";
@@ -89,12 +89,19 @@ const ROTULO_PLANO: Record<string, string> = {
 
 const CHECKBOX = "h-5 w-5 shrink-0 cursor-pointer accent-destaque";
 
-// Hospedagem e Internacional são dos planos Pro e Platina.
-const MODOS: { modo: Modo; rotulo: string; pro: boolean }[] = [
-  { modo: "negocios", rotulo: "Negócios", pro: false },
-  { modo: "hospedagem", rotulo: "Hospedagem", pro: true },
-  { modo: "internacional", rotulo: "Internacional", pro: true },
+// Hospedagem é dos planos Pro e Platina; Internacional, só do Platina.
+const MODOS: { modo: Modo; rotulo: string; planos: string | null }[] = [
+  { modo: "negocios", rotulo: "Negócios", planos: null },
+  { modo: "hospedagem", rotulo: "Hospedagem", planos: "nos planos Pro e Platina" },
+  { modo: "internacional", rotulo: "Internacional", planos: "no plano Platina" },
 ];
+
+// O plano pode usar este modo de busca?
+function modoLiberado(modo: Modo, plano: string): boolean {
+  if (modo === "hospedagem") return temRecursosPro(plano);
+  if (modo === "internacional") return temInternacional(plano);
+  return true;
+}
 
 // "(Hospedagem)", "(Internacional · 🇺🇸 Estados Unidos)" ou nada.
 function rotuloModo(info: { modo: Modo; pais: CodigoPais | null }): string {
@@ -146,7 +153,7 @@ export default function BuscaClient({
   const [nicho, setNicho] = useState(ultimaBusca?.termos.join(", ") ?? "");
   const [areas, setAreas] = useState(ultimaBusca?.areas.join(", ") ?? "");
   const [modo, setModo] = useState<Modo>(
-    ultimaBusca && ultimaBusca.modo !== "negocios" && temRecursosPro(perfilInicial.plano) ? ultimaBusca.modo : "negocios",
+    ultimaBusca && modoLiberado(ultimaBusca.modo, perfilInicial.plano) ? ultimaBusca.modo : "negocios",
   );
   const [pais, setPais] = useState<CodigoPais>(ultimaBusca?.pais ?? PAISES_INTERNACIONAIS[0]);
   const [perfil, setPerfil] = useState(perfilInicial);
@@ -190,6 +197,7 @@ export default function BuscaClient({
   const listaAreas = useMemo(() => dividirLista(areas), [areas]);
   const estimativaBuscas = termos.length * listaAreas.length;
   const podeHospedagem = temRecursosPro(perfil.plano);
+  const podeInternacional = temInternacional(perfil.plano);
   const ehInternacional = modo === "internacional";
   // Config do país da busca (Brasil nas abas Negócios e Hospedagem).
   const paisBusca = configPais(ehInternacional ? pais : null);
@@ -257,7 +265,7 @@ export default function BuscaClient({
   }
 
   function alternarModo(novoModo: Modo) {
-    if (novoModo !== "negocios" && !podeHospedagem) return;
+    if (!modoLiberado(novoModo, perfil.plano)) return;
     setModo(novoModo);
   }
 
@@ -271,8 +279,8 @@ export default function BuscaClient({
     if (modo === "hospedagem" && !podeHospedagem) {
       return setErro("O modo Hospedagem é dos planos Pro e Platina.");
     }
-    if (ehInternacional && !podeHospedagem) {
-      return setErro("A aba Internacional é dos planos Pro e Platina.");
+    if (ehInternacional && !podeInternacional) {
+      return setErro("A aba Internacional é do plano Platina.");
     }
     if (estimativaBuscas > perfil.buscasRestantes) {
       return setErro(
@@ -392,7 +400,7 @@ export default function BuscaClient({
     <div>
       <TituloPagina
         titulo="Buscar leads"
-        descricao="Busca no Google Maps e separa quem não tem site, quem depende de Airbnb/Booking e quem só usa app ou rede social. Nos planos Pro e Platina, também em outros países."
+        descricao="Busca no Google Maps e separa quem não tem site, quem depende de Airbnb/Booking e quem só usa app ou rede social. No plano Platina, também em outros países."
       />
 
       {/* data-tour: partes destacadas pelo tour da Ártemis
@@ -412,7 +420,7 @@ export default function BuscaClient({
       <div data-tour="busca" className={`${CARTAO} mt-4 p-4 sm:p-6`}>
         <div role="group" aria-label="Tipo de busca" className="grid w-full grid-cols-3 gap-1 border border-line bg-canvas p-1 sm:inline-grid sm:w-auto">
           {MODOS.map((m) => {
-            const bloqueado = m.pro && !podeHospedagem;
+            const bloqueado = !modoLiberado(m.modo, perfil.plano);
             return (
               <button
                 key={m.modo}
@@ -420,7 +428,7 @@ export default function BuscaClient({
                 onClick={() => alternarModo(m.modo)}
                 disabled={bloqueado}
                 aria-pressed={modo === m.modo}
-                title={bloqueado ? "Disponível nos planos Pro e Platina" : undefined}
+                title={bloqueado ? `Disponível ${m.planos}` : undefined}
                 className={`inline-flex min-h-11 items-center justify-center gap-1.5 px-2 font-display text-[13px] font-semibold uppercase tracking-[0.06em] transition sm:px-5 sm:text-sm sm:tracking-[0.08em] ${
                   modo === m.modo ? ABA_ATIVA : ABA_INATIVA
                 } ${bloqueado ? "cursor-not-allowed opacity-60" : ""}`}
@@ -429,7 +437,7 @@ export default function BuscaClient({
                 {bloqueado && (
                   <>
                     <IconeCadeado width={14} height={14} />
-                    <span className="sr-only">(dos planos Pro e Platina)</span>
+                    <span className="sr-only">(disponível {m.planos})</span>
                   </>
                 )}
               </button>

@@ -221,7 +221,7 @@ cada um no SQL Editor do Supabase:
     (verde/amarelo/vermelho) da busca não depende deste script.
 21. `supabase/etapa21-1-internacional-base.sql` e depois
     `supabase/etapa21-2-internacional-funcoes.sql` — aba Internacional
-    da página Buscar (plano Pro), começando por EUA e Canadá: busca com
+    da página Buscar (hoje só no plano Platina, veja a etapa 28), começando por EUA e Canadá: busca com
     região e idioma do país, telefone internacional com botão de ligar,
     hora local da empresa e mensagem pronta em inglês (editável no
     Perfil). Cria a tabela `dominios_terceiro` (Gestão > Sites de
@@ -307,6 +307,12 @@ cada um no SQL Editor do Supabase:
     limite de 20 por mês e o aviso do sino do tipo `indicacao`. Precisa
     da `SUPABASE_SERVICE_ROLE_KEY`. Veja "Relatório mensal", "Link de
     indicação" e "Exportar carteira" abaixo.
+28. `supabase/etapa28-internacional-platina.sql` — a aba Internacional
+    deixa de ser do plano Pro e passa a ser só do Platina (o modo
+    Hospedagem continua no Pro e no Platina). Cria a função
+    `plano_tem_internacional` e atualiza `iniciar_busca`. Nada é apagado:
+    leads internacionais já desbloqueados continuam em "Meus leads". A
+    mesma regra está em `lib/planos.ts`.
 
 ### Relatório mensal ("Meu mês")
 

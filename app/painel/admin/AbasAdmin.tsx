@@ -10,6 +10,7 @@ const ABAS = [
   { href: "/painel/admin/sites", rotulo: "Sites IA" },
   { href: "/painel/admin/leads-invalidos", rotulo: "Leads inválidos" },
   { href: "/painel/admin/dominios", rotulo: "Sites de terceiros" },
+  { href: "/painel/admin/registradores", rotulo: "Registradores" },
   { href: "/painel/admin/brasileiros", rotulo: "Negócio brasileiro" },
   { href: "/painel/admin/pagamentos", rotulo: "Pagamentos" },
   { href: "/painel/admin/promocoes", rotulo: "Promoções" },

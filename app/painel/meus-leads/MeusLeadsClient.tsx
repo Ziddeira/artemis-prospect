@@ -39,11 +39,13 @@ import type { MarcacaoInvalido } from "@/lib/leads/invalido";
 import { MSG_FALTA_ETAPA10, statusRetorno, type RetornoLead as Retorno } from "@/lib/leads/retorno";
 import { ALERTA_AVISO, BOTAO_NEUTRO, BOTAO_WHATSAPP, CAMPO, CARTAO } from "@/components/ui";
 import { ROTULO_STATUS, SITUACOES_CONTRATO, type StatusContrato } from "@/lib/contratos/dados";
+import { linkBuscaDominio } from "@/lib/dominios/regras";
 import {
   IconeAtualizar,
   IconeBuscar,
   IconeContrato,
   IconeEstrela,
+  IconeGlobo,
   IconeLink,
   IconeMapa,
   IconeSite,
@@ -373,6 +375,10 @@ export default function MeusLeadsClient({
                     >
                       <IconeSite width={18} height={18} />
                       {gerarSite ? "Gerar site" : "Gerar site (Platina)"}
+                    </Link>
+                    <Link href={linkBuscaDominio(estado.dados.nome, estado.dados.bairro)} className={BOTAO_NEUTRO}>
+                      <IconeGlobo width={18} height={18} />
+                      Buscar domínio para esta empresa
                     </Link>
                     {/* Contrato: só para lead em negociação ou fechado. */}
                     {contratoAtivo &&

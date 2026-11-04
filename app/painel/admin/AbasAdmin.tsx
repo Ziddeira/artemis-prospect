@@ -6,6 +6,7 @@ import { ABA_ATIVA, ABA_INATIVA } from "@/components/ui";
 
 const ABAS = [
   { href: "/painel/admin", rotulo: "Visão geral" },
+  { href: "/painel/admin/laura", rotulo: "Laura" },
   { href: "/painel/admin/uso", rotulo: "Uso e custo" },
   { href: "/painel/admin/sites", rotulo: "Sites IA" },
   { href: "/painel/admin/leads-invalidos", rotulo: "Leads inválidos" },
